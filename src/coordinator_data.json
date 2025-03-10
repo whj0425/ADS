@@ -1,0 +1,21 @@
+{
+  "account_nodes": {
+    "account2": {
+      "port": 5012,
+      "last_heartbeat": 1741603524.920939
+    },
+    "account1": {
+      "port": 5011,
+      "last_heartbeat": 1741603524.9220219
+    }
+  },
+  "transactions": {
+    "4fa3f430-a956-4e36-9478-427650d7adf7": {
+      "status": "completed",
+      "from": "account1",
+      "to": "account2",
+      "amount": 100.0,
+      "timestamp": 1741603497.07252
+    }
+  }
+}
