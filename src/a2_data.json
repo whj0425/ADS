@@ -1,0 +1,15 @@
+{
+  "balance": 10000,
+  "transaction_history": [
+    {
+      "transaction_id": "41521735-6be1-457b-936e-a37feb6a21a6",
+      "amount": 100.0,
+      "timestamp": 1741603848.579455
+    },
+    {
+      "transaction_id": "a3c3de25-cda3-4709-9ba3-5e5c908954a5",
+      "amount": 200.0,
+      "timestamp": 1741603872.895665
+    }
+  ]
+}

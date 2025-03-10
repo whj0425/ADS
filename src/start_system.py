@@ -51,8 +51,9 @@ def initialize_accounts(coordinator_port, amount=10000):
 
 def main():
     # Configuration
-    coordinator_port = 5010
-    account_ports = [5011, 5012]  # Ports for account nodes
+    coordinator_port = 6010
+    account_ports = [6011, 6012]  # Ports for primary account nodes
+    backup_ports = [6013, 6014]  # Ports for backup account nodes
     initial_balance = 10000
     
     # Check if ports are available
@@ -60,7 +61,7 @@ def main():
     if not is_port_available(coordinator_port):
         unavailable_ports.append(coordinator_port)
     
-    for port in account_ports:
+    for port in account_ports + backup_ports:
         if not is_port_available(port):
             unavailable_ports.append(port)
     
@@ -91,23 +92,37 @@ def main():
     
     print("Transaction coordinator started successfully")
     
-    # Start the account nodes
+    # Start the primary account nodes
     account_processes = []
     for i, port in enumerate(account_ports):
         account_id = f"a{i+1}"
-        print(f"Starting account node {account_id} on port {port}...")
+        print(f"Starting primary account node {account_id} on port {port}...")
         
         account_process = subprocess.Popen(
-            [sys.executable, 'account_node.py', account_id, str(port), str(coordinator_port)],
+            [sys.executable, 'account_node.py', account_id, str(port), str(coordinator_port), 'primary'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
         )
-        account_processes.append((account_id, account_process))
+        account_processes.append((account_id, 'primary', account_process))
+    
+    # Start the backup account nodes
+    for i, port in enumerate(backup_ports):
+        account_id = f"a{i+1}b"  # b suffix for backup
+        primary_id = f"a{i+1}"  # corresponding primary
+        print(f"Starting backup account node {account_id} on port {port} for primary {primary_id}...")
+        
+        backup_process = subprocess.Popen(
+            [sys.executable, 'account_node.py', account_id, str(port), str(coordinator_port), 'backup'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        account_processes.append((account_id, 'backup', backup_process))
     
     # Wait for all account nodes to register with the coordinator
-    print("Waiting for account nodes to register...")
-    time.sleep(10)  # Give more time for nodes to register
+    print("Waiting for account nodes to register and establish primary-backup relationships...")
+    time.sleep(15)  # Give more time for nodes to register and establish relationships
     
     # Verify the coordinator is responding
     try:
@@ -132,8 +147,19 @@ def main():
     
     print("\nDistributed Banking System started successfully!")
     print(f"- Transaction Coordinator {coordinator_id} running on port {coordinator_port}")
-    for account_id, _ in account_processes:
-        print(f"- Account Node {account_id} registered")
+    
+    # Group nodes by role for better display
+    primary_nodes = [node_id for node_id, role, _ in account_processes if role == 'primary']
+    backup_nodes = [node_id for node_id, role, _ in account_processes if role == 'backup']
+    
+    print("- Primary Account Nodes:")
+    for node_id in primary_nodes:
+        print(f"  - {node_id}")
+    
+    print("- Backup Account Nodes:")
+    for node_id in backup_nodes:
+        print(f"  - {node_id}")
+    
     print(f"- All accounts initialized with balance of {initial_balance}")
     print("\nTo interact with the system, run the client: python client.py")
     print(f"\nIMPORTANT: Make sure to use port {coordinator_port} for the client!")
@@ -146,8 +172,8 @@ def main():
     
     except KeyboardInterrupt:
         print("\nShutting down the system...")
-        for account_id, process in account_processes:
-            print(f"Terminating account node {account_id}...")
+        for account_id, role, process in account_processes:
+            print(f"Terminating {role} account node {account_id}...")
             process.terminate()
         
         print("Terminating transaction coordinator...")

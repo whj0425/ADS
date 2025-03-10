@@ -9,10 +9,11 @@ class TransactionCoordinator:
     def __init__(self, port=5010, coordinator_id="c1"):
         self.coordinator_id = coordinator_id
         self.port = port
-        self.account_nodes = {}  # {node_id: {'port': port, 'last_heartbeat': timestamp}}
+        self.account_nodes = {}  # {node_id: {'port': port, 'last_heartbeat': timestamp, 'role': role, 'backup': backup_node_id}}
         self.transactions = {}  # {transaction_id: {'status': status, 'from': node_id, 'to': node_id, 'amount': amount}}
         self.lock = threading.Lock()
         self.data_file = "coordinator_data.json"
+        self.node_pairs = {}  # {primary_id: backup_id} - tracks primary-backup relationships
         
         # Load data if exists
         self.load_data()
@@ -37,13 +38,15 @@ class TransactionCoordinator:
                     data = json.load(f)
                     self.account_nodes = data.get('account_nodes', {})
                     self.transactions = data.get('transactions', {})
+                    self.node_pairs = data.get('node_pairs', {})
             except Exception as e:
                 print(f"Error loading coordinator data: {e}")
     
     def save_data(self):
         data = {
             'account_nodes': self.account_nodes,
-            'transactions': self.transactions
+            'transactions': self.transactions,
+            'node_pairs': self.node_pairs
         }
         with open(self.data_file, 'w') as f:
             json.dump(data, f, indent=2)
@@ -76,19 +79,63 @@ class TransactionCoordinator:
                 node_id = request.get('node_id')
                 node_type = request.get('node_type')
                 port = request.get('port')
+                role = request.get('role', 'primary')  # Default to primary if not specified
+                backup_node = request.get('backup_node')
+                primary_node = request.get('primary_node')
                 
                 if node_type == 'account':
                     with self.lock:
+                        # Store node information
                         self.account_nodes[node_id] = {
                             'port': port,
-                            'last_heartbeat': time.time()
+                            'last_heartbeat': time.time(),
+                            'role': role
                         }
+                        
+                        # Assign backup/primary relationships if needed
+                        response = {
+                            'status': 'success',
+                            'message': 'Heartbeat received'
+                        }
+                        
+                        # Handle primary-backup pairing - use node ID patterns to auto-assign pairs
+                        # Primary nodes are named a1, a2, etc.
+                        # Backup nodes are named a1b, a2b, etc.
+                        
+                        # If this is a primary node
+                        if role == 'primary' and not backup_node:
+                            # Look for a backup with matching ID pattern (e.g., a1 -> a1b)
+                            backup_id = f"{node_id}b"
+                            if backup_id in self.account_nodes and self.account_nodes[backup_id]['role'] == 'backup':
+                                # Assign this backup to this primary
+                                self.node_pairs[node_id] = backup_id
+                                
+                                # Add backup info to response
+                                response['backup_assigned'] = True
+                                response['backup_info'] = {
+                                    'node_id': backup_id,
+                                    'port': self.account_nodes[backup_id]['port']
+                                }
+                                print(f"Paired primary {node_id} with backup {backup_id}")
+                        
+                        # If this is a backup node
+                        elif role == 'backup' and not primary_node:
+                            # Look for primary with matching ID pattern (a1b -> a1)
+                            if node_id.endswith('b') and len(node_id) > 1:
+                                primary_id = node_id[:-1]  # Remove the 'b' suffix
+                                if primary_id in self.account_nodes and self.account_nodes[primary_id]['role'] == 'primary':
+                                    # Assign this backup to this primary
+                                    self.node_pairs[primary_id] = node_id
+                                    
+                                    # Add primary info to response
+                                    response['primary_assigned'] = True
+                                    response['primary_info'] = {
+                                        'node_id': primary_id,
+                                        'port': self.account_nodes[primary_id]['port']
+                                    }
+                                    print(f"Paired backup {node_id} with primary {primary_id}")
+                        
                         self.save_data()
-                
-                response = {
-                    'status': 'success',
-                    'message': 'Heartbeat received'
-                }
             
             elif command == 'list_accounts':
                 with self.lock:
@@ -130,7 +177,11 @@ class TransactionCoordinator:
                 amount = request.get('amount', 10000)
                 success = True
                 
-                for node_id, node_info in self.account_nodes.items():
+                # Only initialize primary nodes (backups will be synced automatically)
+                primary_nodes = {n: info for n, info in self.account_nodes.items() 
+                                if info.get('role', 'primary') == 'primary'}
+                
+                for node_id, node_info in primary_nodes.items():
                     try:
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                             s.connect(('localhost', node_info['port']))
@@ -159,6 +210,47 @@ class TransactionCoordinator:
                     response = {
                         'status': 'error',
                         'message': 'Failed to initialize all accounts'
+                    }
+            
+            elif command == 'report_node_failure':
+                # Handle node failure report from a backup node
+                reporter_id = request.get('reporter')
+                failed_node_id = request.get('failed_node')
+                reporter_role = request.get('reporter_role')
+                
+                if reporter_role == 'backup' and failed_node_id:
+                    # Verify that reporter is actually backup of the failed node
+                    is_valid_reporter = False
+                    
+                    for primary_id, backup_id in self.node_pairs.items():
+                        if primary_id == failed_node_id and backup_id == reporter_id:
+                            is_valid_reporter = True
+                            break
+                    
+                    if is_valid_reporter and failed_node_id in self.account_nodes:
+                        print(f"Received verified failure report for node {failed_node_id}")
+                        # Promote the backup to primary
+                        self.promote_backup_to_primary(reporter_id, failed_node_id)
+                        
+                        # Remove the failed node
+                        with self.lock:
+                            self.account_nodes.pop(failed_node_id, None)
+                            self.node_pairs.pop(failed_node_id, None)
+                            self.save_data()
+                        
+                        response = {
+                            'status': 'success',
+                            'message': 'Failure reported and handled'
+                        }
+                    else:
+                        response = {
+                            'status': 'error',
+                            'message': 'Invalid failure report'
+                        }
+                else:
+                    response = {
+                        'status': 'error',
+                        'message': 'Invalid failure report format'
                     }
             
             client.send(json.dumps(response).encode('utf-8'))
@@ -276,26 +368,84 @@ class TransactionCoordinator:
             return False
     
     def monitor_nodes(self):
-        # Check node health periodically
+        # Check node health periodically and handle failover
         while True:
             with self.lock:
                 current_time = time.time()
                 dead_nodes = []
                 
-                for node_id, node_info in self.account_nodes.items():
+                for node_id, node_info in list(self.account_nodes.items()):
                     # Check if node hasn't sent a heartbeat in 15 seconds
                     if current_time - node_info.get('last_heartbeat', 0) > 15:
                         dead_nodes.append(node_id)
                 
-                # Remove dead nodes
+                # Process dead nodes
                 for node_id in dead_nodes:
-                    print(f"Node {node_id} appears to be dead, removing from registry")
+                    print(f"Node {node_id} appears to be dead, processing failover if needed")
+                    node_role = self.account_nodes[node_id].get('role', 'primary')
+                    
+                    # If primary node is dead, promote its backup
+                    if node_role == 'primary':
+                        backup_id = self.node_pairs.get(node_id)
+                        if backup_id and backup_id in self.account_nodes:
+                            print(f"Promoting backup {backup_id} to primary")
+                            self.promote_backup_to_primary(backup_id, node_id)
+                    
+                    # Remove the dead node
                     self.account_nodes.pop(node_id, None)
+                    
+                    # Clean up node pairs
+                    if node_role == 'primary':
+                        self.node_pairs.pop(node_id, None)
+                    elif node_role == 'backup':
+                        # Find and remove any entry where this node is a backup
+                        for primary_id, backup_id in list(self.node_pairs.items()):
+                            if backup_id == node_id:
+                                self.node_pairs.pop(primary_id)
+                                break
                 
                 if dead_nodes:
                     self.save_data()
             
             time.sleep(5)  # Check every 5 seconds
+            
+    def promote_backup_to_primary(self, backup_id, failed_primary_id):
+        """Promote a backup node to primary role"""
+        try:
+            if backup_id not in self.account_nodes:
+                print(f"Cannot promote {backup_id}: not found in active nodes")
+                return False
+            
+            backup_port = self.account_nodes[backup_id]['port']
+            
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect(('localhost', backup_port))
+                promote_request = {
+                    'command': 'become_primary'
+                }
+                s.send(json.dumps(promote_request).encode('utf-8'))
+                promote_response = json.loads(s.recv(4096).decode('utf-8'))
+                
+                if promote_response.get('status') == 'success':
+                    # Update node role in coordinator
+                    with self.lock:
+                        self.account_nodes[backup_id]['role'] = 'primary'
+                        
+                        # Remove the primary-backup relationship
+                        self.node_pairs.pop(failed_primary_id, None)
+                        
+                        # Save the updated state
+                        self.save_data()
+                    
+                    print(f"Successfully promoted backup {backup_id} to primary")
+                    return True
+                else:
+                    print(f"Failed to promote backup: {promote_response.get('message')}")
+                    return False
+        
+        except Exception as e:
+            print(f"Error promoting backup to primary: {e}")
+            return False
 
 if __name__ == "__main__":
     import sys
