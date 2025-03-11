@@ -144,6 +144,61 @@ class TransactionCoordinator:
                         'accounts': list(self.account_nodes.keys())
                     }
             
+            elif command == 'simulate_failure':
+                # 模拟节点故障的命令
+                node_id = request.get('node_id')
+                
+                with self.lock:
+                    if node_id in self.account_nodes:
+                        # 标记节点为故障状态
+                        self.account_nodes[node_id]['status'] = 'failed'
+                        self.account_nodes[node_id]['failure_time'] = time.time()
+                        
+                        print(f"节点 {node_id} 被标记为故障状态")
+                        
+                        # 检查是否有备份节点需要接管
+                        backup_node_id = self.node_pairs.get(node_id)
+                        
+                        if backup_node_id and backup_node_id in self.account_nodes:
+                            print(f"备份节点 {backup_node_id} 将接管 {node_id} 的工作")
+                            # 这里可以添加更多逻辑来处理故障转移
+                        
+                        self.save_data()
+                        
+                        response = {
+                            'status': 'success',
+                            'message': f'节点 {node_id} 已被标记为故障状态',
+                            'backup_node': backup_node_id if backup_node_id else None
+                        }
+                    else:
+                        response = {
+                            'status': 'error',
+                            'message': f'节点 {node_id} 不存在'
+                        }
+            
+            elif command == 'check_node_status':
+                # 检查节点状态命令
+                node_id = request.get('node_id')
+                
+                with self.lock:
+                    if node_id in self.account_nodes:
+                        node_info = self.account_nodes[node_id]
+                        is_active = node_info.get('status') != 'failed'
+                        backup_node_id = self.node_pairs.get(node_id)
+                        
+                        response = {
+                            'status': 'success',
+                            'node_id': node_id,
+                            'is_active': is_active,
+                            'role': node_info.get('role', 'primary'),
+                            'backup_node': backup_node_id
+                        }
+                    else:
+                        response = {
+                            'status': 'error',
+                            'message': f'节点 {node_id} 不存在'
+                        }
+            
             elif command == 'transfer':
                 # Handle transfer request
                 from_account = request.get('from')
@@ -211,6 +266,44 @@ class TransactionCoordinator:
                         'status': 'error',
                         'message': 'Failed to initialize all accounts'
                     }
+            
+            elif command == 'get_balance':
+                # Handle balance query request
+                account_id = request.get('account_id')
+                
+                if account_id not in self.account_nodes:
+                    response = {
+                        'status': 'error',
+                        'message': f'Account {account_id} not found'
+                    }
+                else:
+                    # Forward request to account node
+                    try:
+                        node_info = self.account_nodes[account_id]
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                            s.connect(('localhost', node_info['port']))
+                            balance_request = {
+                                'command': 'get_balance'
+                            }
+                            s.send(json.dumps(balance_request).encode('utf-8'))
+                            balance_response = json.loads(s.recv(4096).decode('utf-8'))
+                            
+                            if balance_response.get('status') == 'success':
+                                response = {
+                                    'status': 'success',
+                                    'balance': balance_response.get('balance'),
+                                    'account_id': account_id
+                                }
+                            else:
+                                response = {
+                                    'status': 'error',
+                                    'message': f'Failed to get balance from account {account_id}'
+                                }
+                    except Exception as e:
+                        response = {
+                            'status': 'error',
+                            'message': f'Error accessing account {account_id}: {str(e)}'
+                        }
             
             elif command == 'report_node_failure':
                 # Handle node failure report from a backup node
@@ -324,9 +417,27 @@ class TransactionCoordinator:
     
     def prepare_transfer(self, account_id, amount, is_sender):
         try:
+            # 首先确保我们只对主节点进行操作
             node_info = self.account_nodes.get(account_id)
             if not node_info:
                 return False
+            
+            # 如果这是备份节点，需要找到对应的主节点
+            node_role = node_info.get('role', 'primary')
+            if node_role == 'backup':
+                # 对于备份节点(例如a1b)，找到其对应的主节点(a1)
+                if account_id.endswith('b') and len(account_id) > 1:
+                    primary_id = account_id[:-1]  # 去掉'b'后缀
+                    if primary_id in self.account_nodes:
+                        node_info = self.account_nodes[primary_id]
+                        account_id = primary_id
+                        print(f"Redirecting prepare request from backup {account_id}b to primary {account_id}")
+                    else:
+                        print(f"Error: Primary node for backup {account_id} not found")
+                        return False
+                else:
+                    print(f"Error: Backup node {account_id} has invalid format")
+                    return False
             
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect(('localhost', node_info['port']))
@@ -346,9 +457,27 @@ class TransactionCoordinator:
     
     def execute_transfer(self, transaction_id, account_id, amount, is_sender):
         try:
+            # 首先确保我们只对主节点进行操作
             node_info = self.account_nodes.get(account_id)
             if not node_info:
                 return False
+            
+            # 如果这是备份节点，需要找到对应的主节点
+            node_role = node_info.get('role', 'primary')
+            if node_role == 'backup':
+                # 对于备份节点(例如a1b)，找到其对应的主节点(a1)
+                if account_id.endswith('b') and len(account_id) > 1:
+                    primary_id = account_id[:-1]  # 去掉'b'后缀
+                    if primary_id in self.account_nodes:
+                        node_info = self.account_nodes[primary_id]
+                        account_id = primary_id
+                        print(f"Redirecting execute request from backup {account_id}b to primary {account_id}")
+                    else:
+                        print(f"Error: Primary node for backup {account_id} not found")
+                        return False
+                else:
+                    print(f"Error: Backup node {account_id} has invalid format")
+                    return False
             
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect(('localhost', node_info['port']))
