@@ -1,21 +1,786 @@
 {
   "account_nodes": {
-    "account2": {
-      "port": 5012,
-      "last_heartbeat": 1741603524.920939
+    "a2": {
+      "port": 6012,
+      "last_heartbeat": 1741764276.387718,
+      "role": "primary"
     },
-    "account1": {
-      "port": 5011,
-      "last_heartbeat": 1741603524.9220219
+    "a1": {
+      "port": 6011,
+      "last_heartbeat": 1741764276.381564,
+      "role": "primary"
+    },
+    "a1b": {
+      "port": 6013,
+      "last_heartbeat": 1741764276.385469,
+      "role": "backup"
+    },
+    "a2b": {
+      "port": 6014,
+      "last_heartbeat": 1741764276.387035,
+      "role": "backup"
     }
   },
   "transactions": {
-    "4fa3f430-a956-4e36-9478-427650d7adf7": {
+    "6866d41a-bc88-4ec7-884a-64ca948ce56a": {
       "status": "completed",
-      "from": "account1",
-      "to": "account2",
-      "amount": 100.0,
-      "timestamp": 1741603497.07252
+      "from": "a1",
+      "to": "a1b",
+      "amount": 100,
+      "timestamp": 1741611887.645483
+    },
+    "d8d9d164-e878-49e9-a057-331a981f9030": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a1b",
+      "amount": 100,
+      "timestamp": 1741611887.64607
+    },
+    "e524a650-7070-4bb0-9377-47a9294e3eaf": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a1b",
+      "amount": 100,
+      "timestamp": 1741611887.646431
+    },
+    "b7c7b84e-bea1-418e-8cfa-b18f14e7490c": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a1b",
+      "amount": 100,
+      "timestamp": 1741611887.6466181
+    },
+    "18080f95-8767-48d9-9159-b2909104d92e": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a1b",
+      "amount": 100,
+      "timestamp": 1741611887.6467872
+    },
+    "d5906b40-961d-4335-9bec-e3950418f4cb": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741611888.6582332
+    },
+    "d670105c-712a-4971-b3bd-e53abfa309af": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741611888.659073
+    },
+    "97029472-153d-488f-85d6-6264475b6416": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741611888.659717
+    },
+    "0a5ae7db-3470-4ae2-895e-23a7f9d1be19": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741611888.660055
+    },
+    "e2f7accf-13b4-49bc-9f9d-390616af8478": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741611888.66051
+    },
+    "96cc3657-15d9-49bb-bd5b-59522e8dd146": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a1b",
+      "amount": 100,
+      "timestamp": 1741611889.674805
+    },
+    "7cc89cac-06ee-4749-abb4-2a43a3438edc": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741611889.675859
+    },
+    "3089a569-4118-469e-aebe-52a0d7b516fb": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a1b",
+      "amount": 100,
+      "timestamp": 1741611889.676516
+    },
+    "e9b82dad-a538-445c-a4ae-e9394a956901": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741611889.676866
+    },
+    "12dd898f-2496-473a-bb6b-671f70e653d1": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a1b",
+      "amount": 100,
+      "timestamp": 1741611889.677264
+    },
+    "f8a09a90-b5ac-4894-9c38-41b9cf2bcd92": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741611889.677669
+    },
+    "694ba8c6-fb2c-4408-86cf-0e7d09ecc368": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741612050.045192
+    },
+    "547b6ea4-2b3a-48ee-b0da-bc62548824aa": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741612050.045661
+    },
+    "02e4fdf7-89d5-4399-8761-355058174f6f": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741612050.046093
+    },
+    "c4c8db54-7672-4abc-9fc4-1261100f2354": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741612050.046345
+    },
+    "b6ba9dbc-028a-49f6-959c-ab4b2cc9a51a": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741612050.046676
+    },
+    "256643c6-ffed-496e-83ae-d5e5956f9698": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741612051.058987
+    },
+    "a3a11547-525d-4475-85d4-c9502bacd146": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741612051.0601542
+    },
+    "95b703c1-888e-477f-a1e4-f52cb3d0654b": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741612051.060979
+    },
+    "ef949e99-690a-48a4-b337-b1c93854389c": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741612051.061423
+    },
+    "c3eda8e6-5451-4954-95d9-9b5906b10412": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741612051.061994
+    },
+    "4af42064-9d77-41eb-a144-8d9325b20198": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741612052.085423
+    },
+    "dc512916-2b8b-429c-b9b5-326d05a3d427": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741612052.086912
+    },
+    "fbd4b571-3ea0-4b82-ba6a-1a519558b23b": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741612052.087488
+    },
+    "abfcbb0c-b4fc-48d3-9055-491d61c3030b": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741612052.0881221
+    },
+    "bec1bef4-4e3e-4cfc-abaa-e228cb2ef51c": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741612052.088609
+    },
+    "f73b4d90-0bd1-4983-932d-2a566fbd2bc7": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741612052.089464
+    },
+    "b20a727c-a638-4c4c-8679-aa952d1c0593": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684345.903913
+    },
+    "f090edeb-f3fb-40b0-9197-bcda835cf595": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684345.904812
+    },
+    "cefd340e-29c7-4d73-9f77-0bab16f3b85a": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684345.905482
+    },
+    "251c21dd-d722-4428-89a0-b8012f5477bb": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684345.9059289
+    },
+    "b9ee33ea-818b-40ed-8b69-9b50fafcee71": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684345.906537
+    },
+    "e77b82e8-c7af-4a1c-bba5-576025b98881": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684346.925746
+    },
+    "1372edb3-13aa-4652-9feb-4997ee0dba3d": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684346.928961
+    },
+    "594d76f9-1a56-40f6-b7bd-e6706073a092": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684346.930225
+    },
+    "33fb3d07-c30a-485f-925e-73754a8ff748": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684346.9310231
+    },
+    "4adfc161-fc08-4a08-b1d5-7f0ea2b40c8b": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684346.931916
+    },
+    "f42fd9ee-5156-4d49-89e2-a8fdd225bf55": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684347.954371
+    },
+    "5b3b0208-b71d-4c43-a8ec-41f44e95185c": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684347.957031
+    },
+    "8b25eba7-00f6-4faa-87b5-c34aeb136c28": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684347.9588869
+    },
+    "c89c01c4-1c39-402d-84f4-efeb74dd317e": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684347.960099
+    },
+    "da7e0427-5e95-490a-8af9-256031852558": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684347.961115
+    },
+    "341e9c39-2311-4b2f-9960-9b0a7e084999": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684347.9619782
+    },
+    "dabb46b3-8bef-4ae8-8418-4853e611491f": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684369.191531
+    },
+    "d779f9bf-32e2-40a8-b049-3a92a69abe09": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684369.192396
+    },
+    "3865a79f-0cbf-4aaa-90ce-0044e7bb2224": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684369.193099
+    },
+    "59d27fad-6f4c-414e-8d65-e25be3dc41e3": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684369.193685
+    },
+    "4de7e8e7-5e28-4629-a42c-2e4fd8803769": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684369.19437
+    },
+    "f06e6cc7-01f9-48f9-ab03-b14042fc1408": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684370.212687
+    },
+    "25396d3b-a1e5-4962-b09d-6c6ed1465754": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684370.2166662
+    },
+    "f73ac505-6f26-4013-8794-a39c3f1d1ce5": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684370.218144
+    },
+    "3964260d-c2b7-4e66-ba13-591c718cc86f": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684370.219166
+    },
+    "d1a0f97b-9a7c-4a43-ade2-1af88ea84bcc": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684370.22035
+    },
+    "051fa253-50e6-4626-a3e7-777ce27026a5": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684371.2387369
+    },
+    "1fe32ef4-ae32-4bf6-96ad-dd843cd24aea": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684371.2419672
+    },
+    "486b5de1-bcc3-4d73-a510-f771e4a6c17b": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684371.2447748
+    },
+    "2692d86b-e6a3-4d75-b5e8-2310b23e5dfb": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684371.246498
+    },
+    "3527e298-fccf-48f7-909d-f7ebfcd305a5": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684371.2480252
+    },
+    "6c0b2792-7594-462c-961c-06a70e4340fb": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684371.249207
+    },
+    "c0f09462-93cd-4a58-bd72-0ae237de4432": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684902.034176
+    },
+    "48650180-de50-48be-ad23-5a166b065524": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684902.0351539
+    },
+    "f6729222-6cf9-4b2b-ad99-9cfa24d9ca04": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684902.035823
+    },
+    "cb716153-4c54-4280-9e6e-a70b60818a76": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684902.0364978
+    },
+    "2afb6712-9d06-418b-b4bc-d84f4eb26ffe": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684902.0369961
+    },
+    "c8974546-e98d-4a3c-8d92-68074260f04b": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684903.0519319
+    },
+    "681f6166-3501-487c-882f-5befffe8c026": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684903.053441
+    },
+    "cef7371e-d413-42ee-ab9a-7f628e6905c7": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684903.0546198
+    },
+    "00718eb2-172e-4825-885b-3cf570ca6240": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684903.0555289
+    },
+    "d13a1187-261a-4bf3-9926-89bf59e3adca": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684903.056298
+    },
+    "b2e73f69-38ea-456d-974a-1b84f434c95c": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684904.074058
+    },
+    "56cada1a-21f3-44b4-aa80-6f20625eaac4": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684904.07558
+    },
+    "cf79d300-283a-479b-bc45-4b59a63142ce": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684904.076685
+    },
+    "d655894e-8936-42a6-99f4-0e59220b937c": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741684904.077641
+    },
+    "a1861167-ad75-4d72-96a4-8848292d0c0c": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684904.0787652
+    },
+    "6a69c238-7320-49ae-83f5-ff62b95fd50d": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741684904.079799
+    },
+    "334558fd-e55f-4689-82ee-cb8b17866317": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 200,
+      "timestamp": 1741684905.103431
+    },
+    "4d1b4532-2f39-475d-8a96-73ba0cae576e": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 200,
+      "timestamp": 1741684908.631453
+    },
+    "2ed88aa7-91f3-43cb-b16a-7598746479da": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 150,
+      "timestamp": 1741684917.1718342
+    },
+    "8cbb5d73-7a8c-4a80-9ab0-5c4bdb14ff9f": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 200,
+      "timestamp": 1741685634.0269718
+    },
+    "935f6742-54f9-4b09-961f-c99919aea4de": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 200,
+      "timestamp": 1741685637.55657
+    },
+    "92e55c19-3787-43a7-9a42-f7628e1cbf7f": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 150,
+      "timestamp": 1741685646.093604
+    },
+    "a538910e-5ddc-4a0f-a4e3-2db0499f509e": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 200,
+      "timestamp": 1741686304.066164
+    },
+    "5745cf8c-1948-4ba4-b8f3-18fdedf49e57": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 200,
+      "timestamp": 1741686307.601865
+    },
+    "a348c5ea-312a-4d5e-b13e-0fd5ab602a03": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 150,
+      "timestamp": 1741686316.1410801
+    },
+    "32ddba4c-4253-4f9c-90a5-c89ed9f37c52": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741764164.921681
+    },
+    "2d49ba53-b069-456c-92e1-5bbad528e539": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741764164.924105
+    },
+    "f3a73a49-1186-4335-b42a-8447e5da16f3": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741764164.92693
+    },
+    "a7e023dc-f214-4a4a-a35d-f37af5d437ac": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741764164.9283562
+    },
+    "49e8805e-abe7-495e-aa05-24a7a6423a2d": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741764164.9290712
+    },
+    "a0c0ed1c-8462-45d5-9700-8acef33e7255": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741764165.9438322
+    },
+    "7feb82d5-fed0-42aa-b8cf-8f426c01d8d6": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741764165.947826
+    },
+    "665fea35-b3ec-441d-bb38-fec4571b76a2": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741764165.949586
+    },
+    "7fc14fbf-fbe9-446e-8a3e-4a98abe4f6f1": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741764165.950447
+    },
+    "d01dba1f-f0c4-40db-bbd6-46ff62aa6744": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741764165.9512188
+    },
+    "195ddba7-2794-4e0e-8262-e115e6b9c507": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741764166.9696121
+    },
+    "f2ca2d87-a224-4d76-bcee-6c298025fbf1": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741764166.9719229
+    },
+    "c393db3d-2753-4e27-bf68-5a21a73ec468": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741764166.9740422
+    },
+    "cd11e837-b52a-4627-b0be-554525268ca5": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741764166.975841
+    },
+    "9e47c3b9-1eff-4b7a-b5f6-1dc31f41b08b": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1741764166.976602
+    },
+    "e2493fb2-b9b4-461e-b7bb-ca52b39ec47e": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 100,
+      "timestamp": 1741764166.977246
+    },
+    "b162ea1b-1eda-4c5c-9bd0-618df2bf3b02": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 200,
+      "timestamp": 1741764188.2679071
+    },
+    "61b676e4-5670-4a23-b237-8b611e8caea3": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 200,
+      "timestamp": 1741764191.7877178
+    },
+    "1ba2cc28-82b9-4e21-851c-318a600e9f3c": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 150,
+      "timestamp": 1741764200.325814
     }
+  },
+  "node_pairs": {
+    "a1": "a1b",
+    "a2": "a2b"
   }
 }

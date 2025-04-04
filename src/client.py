@@ -51,12 +51,20 @@ class BankClient:
             'amount': amount
         }
         return self.send_request(request)
+    
+    def get_balance(self, account_id):
+        request = {
+            'command': 'get_balance',
+            'account_id': account_id
+        }
+        return self.send_request(request)
 
 def print_help():
     print("\nBank Client Commands:")
     print("  list                    - List all available accounts")
     print("  transfer <from> <to> <amount> - Transfer money between accounts (e.g., transfer a1 a2 100)")
     print("  init <amount>           - Initialize all accounts with amount (default: 10000)")
+    print("  balance <account_id>    - Get the balance of an account")
     print("  exit                    - Exit the client")
     print("  help                    - Show this help message")
 
@@ -131,6 +139,20 @@ def main():
                     print(f"Success: {response.get('message', 'Accounts initialized')}")
                 else:
                     print(f"Error: {response.get('message', 'Initialization failed')}")
+            
+            elif command[0] == 'balance':
+                if len(command) < 2:
+                    print("Error: balance requires <account_id>")
+                    continue
+                
+                account_id = command[1]
+                print(f"Fetching balance for account {account_id}...")
+                response = client.get_balance(account_id)
+                
+                if response['status'] == 'success':
+                    print(f"Account {account_id} balance: {response.get('balance', 'N/A')}")
+                else:
+                    print(f"Error: {response.get('message', 'Could not get balance')}")
             
             else:
                 print(f"Unknown command: {command[0]}")

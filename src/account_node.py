@@ -115,29 +115,42 @@ class AccountNode:
                 is_sender = request.get('is_sender', False)
                 
                 with self.lock:
-                    if is_sender:
-                        self.balance -= amount
-                    else:
-                        self.balance += amount
-                    
-                    # Record transaction
-                    self.transaction_history.append({
-                        'transaction_id': transaction_id,
-                        'amount': amount if not is_sender else -amount,
-                        'timestamp': time.time()
-                    })
-                    
-                    # Save data
-                    self.save_data()
-                    
-                    # If this is a primary node, sync with backup
-                    if self.role == 'primary' and self.backup_node:
-                        self.sync_to_backup()
+                    # 只有当节点角色为primary时才执行实际的转账操作
+                    if self.role == 'primary':
+                        if is_sender:
+                            self.balance -= amount
+                        else:
+                            self.balance += amount
+                        
+                        # Record transaction
+                        self.transaction_history.append({
+                            'transaction_id': transaction_id,
+                            'amount': amount if not is_sender else -amount,
+                            'timestamp': time.time()
+                        })
+                        
+                        # Save data
+                        self.save_data()
+                        
+                        # Sync with backup
+                        if self.backup_node:
+                            self.sync_to_backup()
+                    # 如果是backup节点，记录交易但不修改余额（由primary同步过来）
+                    elif self.role == 'backup':
+                        # 仅记录交易历史
+                        self.transaction_history.append({
+                            'transaction_id': transaction_id,
+                            'amount': amount if not is_sender else -amount,
+                            'timestamp': time.time(),
+                            'note': 'recorded_at_backup'
+                        })
+                        self.save_data()
                     
                     response = {
                         'status': 'success',
                         'message': 'Transfer executed',
-                        'new_balance': self.balance
+                        'new_balance': self.balance,
+                        'role': self.role
                     }
             
             elif command == 'heartbeat':
