@@ -6,10 +6,11 @@ import os
 import uuid
 
 class AccountNode:
-    def __init__(self, node_id, port, coordinator_port=5010, role='primary'):
+    def __init__(self, node_id, port, coordinator_port=5010, role='primary', coordinator_host='localhost'):
         self.node_id = node_id
         self.port = port
         self.coordinator_port = coordinator_port
+        self.coordinator_host = coordinator_host
         self.balance = 0
         self.transaction_history = []
         self.lock = threading.Lock()
@@ -226,7 +227,7 @@ class AccountNode:
         while True:
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.connect(('localhost', self.coordinator_port))
+                    s.connect((self.coordinator_host, self.coordinator_port))
                     heartbeat = {
                         'command': 'heartbeat',
                         'node_id': self.node_id,
@@ -280,7 +281,7 @@ class AccountNode:
         
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect(('localhost', self.backup_node['port']))
+                s.connect((self.coordinator_host, self.backup_node['port']))
                 sync_data = {
                     'command': 'sync_data',
                     'balance': self.balance,
@@ -306,7 +307,7 @@ class AccountNode:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(2)  # Short timeout for health check
-                s.connect(('localhost', self.primary_node['port']))
+                s.connect((self.coordinator_host, self.primary_node['port']))
                 health_check = {
                     'command': 'heartbeat'
                 }
@@ -328,7 +329,7 @@ class AccountNode:
         """Notify coordinator that primary appears to be down"""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect(('localhost', self.coordinator_port))
+                s.connect((self.coordinator_host, self.coordinator_port))
                 failure_report = {
                     'command': 'report_node_failure',
                     'reporter': self.node_id,
@@ -346,7 +347,7 @@ if __name__ == "__main__":
     import sys
     
     if len(sys.argv) < 3:
-        print("Usage: python account_node.py <node_id> <port> [coordinator_port] [role]")
+        print("Usage: python account_node.py <node_id> <port> [coordinator_port] [role] [coordinator_host]")
         sys.exit(1)
     
     node_id = sys.argv[1]
@@ -354,7 +355,8 @@ if __name__ == "__main__":
     coordinator_port = int(sys.argv[3]) if len(sys.argv) > 3 else 5000
     role = sys.argv[4] if len(sys.argv) > 4 else 'primary'
     
-    node = AccountNode(node_id, port, coordinator_port, role)
+    coordinator_host = sys.argv[5] if len(sys.argv) > 5 else 'localhost'
+    node = AccountNode(node_id, port, coordinator_port, role, coordinator_host)
     
     try:
         while True:

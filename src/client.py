@@ -3,7 +3,7 @@ import json
 import sys
 
 class BankClient:
-    def __init__(self, coordinator_host='192.168.1.100', coordinator_port=5010):
+    def __init__(self, coordinator_host='172.20.10.2', coordinator_port=5010):
         self.coordinator_host = coordinator_host
         self.coordinator_port = coordinator_port
     
