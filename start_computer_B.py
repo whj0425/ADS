@@ -7,8 +7,8 @@ import signal
 import json
 
 # 网络配置
-COMPUTER_A_IP = "192.168.1.100"  # 请修改为电脑A的实际IP地址
-COMPUTER_B_IP = "192.168.1.101"  # 请修改为电脑B的实际IP地址
+COMPUTER_A_IP = "172.20.10.2"  # 请修改为电脑A的实际IP地址
+COMPUTER_B_IP = "172.20.10.9"  # 请修改为电脑B的实际IP地址
 
 # 端口配置
 COORDINATOR_PORT = 5010
