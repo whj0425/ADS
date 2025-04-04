@@ -1,0 +1,11 @@
+{
+  "balance": 10000,
+  "transaction_history": [
+    {
+      "transaction_id": "4897c65a-4719-4606-b365-4c827b2eb1f4",
+      "type": "force_set_balance",
+      "balance_after": 10000,
+      "timestamp": 1743790031.164822
+    }
+  ]
+}

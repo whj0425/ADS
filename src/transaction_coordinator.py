@@ -345,22 +345,72 @@ class TransactionCoordinator:
                                 # For simulation, we might allow it, but log a warning.
                                 sync_success = True # Allow recovery without sync for now
 
-                            # Step 4: If sync was successful (or skipped), mark the node as active
+                            # Step 4: If sync was successful (or skipped), mark the node as active and restore primary/backup roles
                             if sync_success:
+                                # Mark the recovering node as active and ensure it's primary
+                                self.account_nodes[node_id]['role'] = 'primary' # Explicitly set recovered node to primary
                                 self.account_nodes[node_id].pop('status', None)
                                 self.account_nodes[node_id].pop('failure_time', None)
-                                # Consider if the recovered node should become primary again or backup
-                                # For simplicity, let's keep it primary for now, assuming a1b might fail later.
-                                # self.account_nodes[node_id]['role'] = 'primary' # Or maybe 'backup'?
+                                print(f"节点 {node_id} 已标记为活跃状态，角色设置为 'primary'")
 
-                                print(f"节点 {node_id} 已完成恢复过程并标记为活跃状态: {self.account_nodes[node_id]}")
+                                # Step 5: Reset the takeover node (original backup) back to 'backup' role
+                                if takeover_node_info and takeover_node_info.get('role') == 'primary':
+                                    print(f"尝试将接管节点 {potential_takeover_node_id} 角色重置回 'backup'")
+                                    try:
+                                        # Notify the takeover node to become backup
+                                        takeover_host = self.node_hosts.get(potential_takeover_node_id, 'localhost')
+                                        takeover_port = takeover_node_info['port']
+                                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                                            s.settimeout(2)
+                                            s.connect((takeover_host, takeover_port))
+                                            become_backup_req = {'command': 'become_backup'} # Node needs to handle this
+                                            s.send(json.dumps(become_backup_req).encode('utf-8'))
+                                            # We don't necessarily need to wait for a response, but log if node acknowledged
+                                            try:
+                                                backup_res_data = s.recv(1024)
+                                                backup_res = json.loads(backup_res_data.decode('utf-8'))
+                                                if backup_res.get('status') == 'success':
+                                                    print(f"节点 {potential_takeover_node_id} 确认已切换回 backup 角色")
+                                                else:
+                                                    print(f"警告: 节点 {potential_takeover_node_id} 切换回 backup 时返回错误: {backup_res.get('message')}")
+                                            except socket.timeout:
+                                                print(f"警告: 等待节点 {potential_takeover_node_id} 确认切换回 backup 时超时")
+                                            except Exception as e_recv:
+                                                print(f"警告: 读取节点 {potential_takeover_node_id} 切换回 backup 响应时出错: {e_recv}")
+
+                                        # Update coordinator state regardless of notification success
+                                        self.account_nodes[potential_takeover_node_id]['role'] = 'backup'
+                                        # Re-establish the pairing in node_pairs
+                                        self.node_pairs[node_id] = potential_takeover_node_id
+                                        print(f"协调器已将节点 {potential_takeover_node_id} 角色更新为 'backup' 并恢复配对关系 {node_id} -> {potential_takeover_node_id}")
+
+                                    except Exception as e_notify:
+                                        print(f"错误: 尝试通知节点 {potential_takeover_node_id} 切换回 backup 时出错: {e_notify}. 协调器状态可能与节点不一致!")
+                                        # Decide on error handling: proceed with coordinator state update?
+                                        # For now, let's update coordinator state but log the inconsistency risk
+                                        self.account_nodes[potential_takeover_node_id]['role'] = 'backup'
+                                        self.node_pairs[node_id] = potential_takeover_node_id
+                                        print(f"警告: 尽管通知失败，协调器仍将 {potential_takeover_node_id} 角色设为 'backup' 并恢复配对")
+                                else:
+                                    print(f"未找到接管节点 {potential_takeover_node_id} 或其角色不是 primary，无需重置角色")
+
+
+                                # Step 6: Save final state and prepare response
+                                print(f"最终确认节点 {node_id} 状态: {self.account_nodes[node_id]}")
+                                if potential_takeover_node_id in self.account_nodes:
+                                     print(f"最终确认节点 {potential_takeover_node_id} 状态: {self.account_nodes[potential_takeover_node_id]}")
+                                print(f"最终确认配对关系: {self.node_pairs.get(node_id)}")
+
                                 self.save_data()
-                                print(f"确认节点 {node_id} 当前状态: {self.account_nodes[node_id].get('status', 'active')}")
-                                
+                                print(f"确认节点 {node_id} 当前状态: {self.account_nodes[node_id].get('status', 'active')}, 角色: {self.account_nodes[node_id].get('role')}")
+                                if potential_takeover_node_id in self.account_nodes:
+                                    print(f"确认节点 {potential_takeover_node_id} 当前状态: {self.account_nodes[potential_takeover_node_id].get('status', 'active')}, 角色: {self.account_nodes[potential_takeover_node_id].get('role')}")
+
                                 response = {
                                     'status': 'success',
-                                    'message': f'节点 {node_id} 已恢复正常状态' + ('并同步了最新余额' if latest_balance is not None else ' (未执行状态同步)'),
-                                    'node_info': self.account_nodes[node_id]
+                                    'message': f'节点 {node_id} 已恢复正常状态并设为 primary。节点 {potential_takeover_node_id} 已重置为 backup。' + (' (同步了最新余额)' if latest_balance is not None else ' (未执行状态同步)'),
+                                    'node_info': self.account_nodes[node_id],
+                                    'backup_node_info': self.account_nodes.get(potential_takeover_node_id)
                                 }
                             else:
                                 print(f"节点 {node_id} 状态同步失败，恢复中止。")
@@ -591,31 +641,45 @@ class TransactionCoordinator:
                                 'message': 'Failure report acknowledged for already failed node.'
                             }
                         else:
-                            # Node is not currently marked as failed, process the report
-                            print(f"Received verified failure report for node {failed_node_id}. Marking as failed and promoting backup.")
+                            # NEW LOGIC: Additional verification before marking as failed
+                            # 1. Check when the last heartbeat was received from the reported node
+                            current_time = time.time()
+                            last_heartbeat = self.account_nodes[failed_node_id].get('last_heartbeat', 0)
+                            time_since_last_heartbeat = current_time - last_heartbeat
                             
-                            # Mark the node as failed
-                            with self.lock:
-                                self.account_nodes[failed_node_id]['status'] = 'failed'
-                                self.account_nodes[failed_node_id]['failure_time'] = time.time()
-                                # Do not remove the node: self.account_nodes.pop(failed_node_id, None)
-                                # Do not remove the pairing here, promote_backup_to_primary handles it.
-                                self.save_data() # Save the failed status
+                            # 2. Only act immediately if heartbeat is significantly old (15+ seconds)
+                            if time_since_last_heartbeat > 15:
+                                print(f"Verified failure report for node {failed_node_id}. Last heartbeat was {time_since_last_heartbeat:.1f} seconds ago. Marking as failed and promoting backup.")
+                                
+                                # Mark the node as failed
+                                with self.lock:
+                                    self.account_nodes[failed_node_id]['status'] = 'failed'
+                                    self.account_nodes[failed_node_id]['failure_time'] = time.time()
+                                    self.save_data() # Save the failed status
 
-                            # Promote the backup to primary
-                            promote_success = self.promote_backup_to_primary(reporter_id, failed_node_id)
-                            
-                            if promote_success:
+                                # Promote the backup to primary
+                                promote_success = self.promote_backup_to_primary(reporter_id, failed_node_id)
+                                
+                                if promote_success:
+                                    response = {
+                                        'status': 'success',
+                                        'message': 'Failure reported, node marked as failed, and backup promoted.'
+                                    }
+                                else:
+                                    response = {
+                                        'status': 'error',
+                                        'message': 'Failure reported and node marked as failed, but backup promotion failed.'
+                                    }
+                            else:
+                                # NEW LOGIC: Heartbeat is recent, log the report but don't act yet
+                                print(f"Received failure report for node {failed_node_id}, but last heartbeat was only {time_since_last_heartbeat:.1f} seconds ago. Logging report but delaying action.")
+                                # Note: We're acknowledging the report but not taking action yet
+                                # This allows automatic retry from the backup node
                                 response = {
                                     'status': 'success',
-                                    'message': 'Failure reported, node marked as failed, and backup promoted.'
-                                }
-                            else:
-                                # Promotion failed, the state might be inconsistent.
-                                # Keep the node marked as failed.
-                                response = {
-                                    'status': 'error',
-                                    'message': 'Failure reported and node marked as failed, but backup promotion failed.'
+                                    'message': 'Failure report received, but action delayed due to recent heartbeat.',
+                                    'retry': True,
+                                    'heartbeat_age': time_since_last_heartbeat
                                 }
                     elif not is_valid_reporter:
                         response = {

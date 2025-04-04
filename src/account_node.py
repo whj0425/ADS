@@ -216,6 +216,27 @@ class AccountNode:
                         'message': 'Only backup nodes can be promoted to primary'
                     }
             
+            elif command == 'become_backup':
+                # Demotion request from coordinator during primary recovery
+                if self.role == 'primary':
+                    self.role = 'backup'
+                    print(f"Node {self.node_id} demoted from primary to backup.")
+                    # Clear primary node info (as we are now backup)
+                    self.primary_node = None 
+                    # We might receive primary info via heartbeat later
+                    response = {
+                        'status': 'success',
+                        'message': f'Node {self.node_id} demoted to backup',
+                        'new_role': 'backup'
+                    }
+                else:
+                    # Node is already backup or in an unexpected state
+                    print(f"Node {self.node_id} received become_backup command but was already {self.role}. Ignoring.")
+                    response = {
+                        'status': 'success', # Still success, as the desired state is achieved
+                        'message': f'Node {self.node_id} is already in backup role'
+                    }
+            
             elif command == 'force_set_balance':
                 # Command from coordinator during recovery to sync state
                 new_balance = request.get('balance')
@@ -331,9 +352,9 @@ class AccountNode:
         if not self.primary_node:
             return
         
-        max_retries = 3
-        retry_delay = 1 # seconds
-        connect_timeout = 5 # seconds, increased from 2
+        max_retries = 5  # Increased from 3 to 5
+        retry_delay = 3  # Increased from 1 to 3 seconds
+        connect_timeout = 8  # Increased from 5 to 8 seconds
         
         for attempt in range(max_retries):
             try:
