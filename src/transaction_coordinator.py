@@ -4,9 +4,15 @@ import threading
 import time
 import uuid
 import os
+import sys
+from pathlib import Path
+
+# 添加项目根目录到系统路径
+sys.path.append(str(Path(__file__).parent.parent))
+from config.network_config import COORDINATOR_PORT
 
 class TransactionCoordinator:
-    def __init__(self, port=5010, coordinator_id="c1"):
+    def __init__(self, port=COORDINATOR_PORT, coordinator_id="c1"):
         self.coordinator_id = coordinator_id
         self.port = port
         self.account_nodes = {}  # {node_id: {'port': port, 'last_heartbeat': timestamp, 'role': role, 'backup': backup_node_id}}
@@ -573,24 +579,53 @@ class TransactionCoordinator:
                             break
                     
                     if is_valid_reporter and failed_node_id in self.account_nodes:
-                        print(f"Received verified failure report for node {failed_node_id}")
-                        # Promote the backup to primary
-                        self.promote_backup_to_primary(reporter_id, failed_node_id)
-                        
-                        # Remove the failed node
-                        with self.lock:
-                            self.account_nodes.pop(failed_node_id, None)
-                            self.node_pairs.pop(failed_node_id, None)
-                            self.save_data()
-                        
-                        response = {
-                            'status': 'success',
-                            'message': 'Failure reported and handled'
-                        }
-                    else:
+                        # Check if the node is already marked as failed (e.g., by monitor)
+                        if self.account_nodes[failed_node_id].get('status') == 'failed':
+                            print(f"Received failure report for node {failed_node_id}, which is already marked as failed.")
+                            # Node already marked as failed, just ensure backup is primary if needed
+                            if reporter_id in self.account_nodes and self.account_nodes[reporter_id].get('role') != 'primary':
+                                print(f"Ensuring reporter {reporter_id} is primary.")
+                                self.promote_backup_to_primary(reporter_id, failed_node_id)
+                            response = {
+                                'status': 'success',
+                                'message': 'Failure report acknowledged for already failed node.'
+                            }
+                        else:
+                            # Node is not currently marked as failed, process the report
+                            print(f"Received verified failure report for node {failed_node_id}. Marking as failed and promoting backup.")
+                            
+                            # Mark the node as failed
+                            with self.lock:
+                                self.account_nodes[failed_node_id]['status'] = 'failed'
+                                self.account_nodes[failed_node_id]['failure_time'] = time.time()
+                                # Do not remove the node: self.account_nodes.pop(failed_node_id, None)
+                                # Do not remove the pairing here, promote_backup_to_primary handles it.
+                                self.save_data() # Save the failed status
+
+                            # Promote the backup to primary
+                            promote_success = self.promote_backup_to_primary(reporter_id, failed_node_id)
+                            
+                            if promote_success:
+                                response = {
+                                    'status': 'success',
+                                    'message': 'Failure reported, node marked as failed, and backup promoted.'
+                                }
+                            else:
+                                # Promotion failed, the state might be inconsistent.
+                                # Keep the node marked as failed.
+                                response = {
+                                    'status': 'error',
+                                    'message': 'Failure reported and node marked as failed, but backup promotion failed.'
+                                }
+                    elif not is_valid_reporter:
                         response = {
                             'status': 'error',
-                            'message': 'Invalid failure report'
+                            'message': f'Invalid failure report: Reporter {reporter_id} is not the backup of {failed_node_id}.'
+                        }
+                    elif failed_node_id not in self.account_nodes:
+                         response = {
+                            'status': 'error',
+                            'message': f'Invalid failure report: Failed node {failed_node_id} not found.'
                         }
                 else:
                     response = {
@@ -794,7 +829,9 @@ class TransactionCoordinator:
     def monitor_nodes(self):
         # Check node health periodically and handle failover
         while True:
-            nodes_marked_failed_this_cycle = []
+            time.sleep(60)  # Check every 60 seconds
+            nodes_marked_failed_this_cycle = [] # Re-initialize the list here
+
             with self.lock:
                 current_time = time.time()
                 
@@ -804,8 +841,10 @@ class TransactionCoordinator:
                         continue
 
                     # Check if node hasn't sent a heartbeat in 15 seconds
-                    if current_time - node_info.get('last_heartbeat', 0) > 15:
-                        print(f"Heartbeat timeout for node {node_id}. Marking as failed.")
+                    heartbeat_timeout = 60 # <---- THIS IS THE VALUE TO CHANGE <--- Changed value from 15
+
+                    if node_info.get('last_heartbeat', 0) is None or (current_time - node_info.get('last_heartbeat', 0) > heartbeat_timeout):
+                        print(f"Node {node_id} has missed heartbeats. Last heartbeat at: {node_info.get('last_heartbeat', 'never')} Current time: {current_time}")
                         
                         # Mark node as failed instead of removing immediately
                         self.account_nodes[node_id]['status'] = 'failed'
@@ -840,8 +879,6 @@ class TransactionCoordinator:
                 # Save data if any nodes were marked as failed
                 if nodes_marked_failed_this_cycle:
                     self.save_data()
-            
-            time.sleep(5)  # Check every 5 seconds
             
     def promote_backup_to_primary(self, backup_id, failed_primary_id):
         """将备份节点提升为主节点"""
@@ -902,7 +939,7 @@ class TransactionCoordinator:
 if __name__ == "__main__":
     import sys
     
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else COORDINATOR_PORT
     
     coordinator = TransactionCoordinator(port)
     

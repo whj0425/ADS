@@ -327,31 +327,54 @@ class AccountNode:
             print(f"Error syncing to backup: {e}")
     
     def check_primary_health(self):
-        """Check if primary node is still alive"""
+        """Check if primary node is still alive with retries"""
         if not self.primary_node:
             return
         
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(2)  # Short timeout for health check
-                s.connect((self.coordinator_host, self.primary_node['port']))
-                health_check = {
-                    'command': 'heartbeat'
-                }
-                s.send(json.dumps(health_check).encode('utf-8'))
-                response = json.loads(s.recv(4096).decode('utf-8'))
-                
-                if response.get('status') == 'success':
-                    # Primary is still alive
-                    pass
-                else:
-                    print(f"Unhealthy response from primary: {response.get('message')}")
-                    self.notify_coordinator_of_primary_failure()
+        max_retries = 3
+        retry_delay = 1 # seconds
+        connect_timeout = 5 # seconds, increased from 2
         
-        except Exception as e:
-            print(f"Primary node may be down: {e}")
-            self.notify_coordinator_of_primary_failure()
-    
+        for attempt in range(max_retries):
+            try:
+                # Use primary node's host if available, otherwise default (could be improved)
+                # Assuming coordinator_host is correctly resolving to the shared machine's IP for now
+                primary_host = self.primary_node.get('host', self.coordinator_host) 
+                primary_port = self.primary_node['port']
+                
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(connect_timeout)  # Increased timeout
+                    s.connect((primary_host, primary_port))
+                    health_check = {
+                        'command': 'heartbeat'
+                    }
+                    s.send(json.dumps(health_check).encode('utf-8'))
+                    response_data = s.recv(4096)
+                    if not response_data: # Handle empty response as potential issue
+                        raise socket.error("Empty response received from primary")
+                    response = json.loads(response_data.decode('utf-8'))
+                    
+                    if response.get('status') == 'success':
+                        # Primary is alive, exit the check successfully
+                        print(f"Primary node {self.primary_node['node_id']} health check successful on attempt {attempt + 1}.")
+                        return 
+                    else:
+                        # Received a non-success status, treat as potentially unhealthy
+                        print(f"Attempt {attempt + 1}/{max_retries}: Unhealthy response from primary: {response.get('message')}")
+                        # Continue to retry 
+            
+            except Exception as e:
+                print(f"Attempt {attempt + 1}/{max_retries}: Primary node health check failed: {e}")
+            
+            # If not the last attempt, wait before retrying
+            if attempt < max_retries - 1:
+                print(f"Waiting {retry_delay} second(s) before next health check attempt...")
+                time.sleep(retry_delay)
+
+        # If all retries failed, notify the coordinator
+        print(f"All {max_retries} health check attempts failed for primary node {self.primary_node['node_id']}. Notifying coordinator.")
+        self.notify_coordinator_of_primary_failure()
+
     def notify_coordinator_of_primary_failure(self):
         """Notify coordinator that primary appears to be down"""
         try:
