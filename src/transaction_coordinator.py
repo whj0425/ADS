@@ -158,34 +158,12 @@ class TransactionCoordinator:
             elif command == 'simulate_failure':
                 # 模拟节点故障的命令
                 node_id = request.get('node_id')
-                
-                with self.lock:
-                    if node_id in self.account_nodes:
-                        # 标记节点为故障状态
-                        self.account_nodes[node_id]['status'] = 'failed'
-                        self.account_nodes[node_id]['failure_time'] = time.time()
-                        
-                        print(f"节点 {node_id} 被标记为故障状态")
-                        
-                        # 检查是否有备份节点需要接管
-                        backup_node_id = self.node_pairs.get(node_id)
-                        
-                        if backup_node_id and backup_node_id in self.account_nodes:
-                            print(f"备份节点 {backup_node_id} 将接管 {node_id} 的工作")
-                            # 这里可以添加更多逻辑来处理故障转移
-                        
-                        self.save_data()
-                        
-                        response = {
-                            'status': 'success',
-                            'message': f'节点 {node_id} 已被标记为故障状态',
-                            'backup_node': backup_node_id if backup_node_id else None
-                        }
-                    else:
-                        response = {
-                            'status': 'error',
-                            'message': f'节点 {node_id} 不存在'
-                        }
+                response = self.simulate_failure(node_id)
+            
+            elif command == 'recover_node':
+                # 恢复节点的命令
+                node_id = request.get('node_id')
+                response = self.recover_node(node_id)
             
             elif command == 'check_node_status':
                 # 检查节点状态命令
@@ -211,7 +189,7 @@ class TransactionCoordinator:
                         }
             
             elif command == 'transfer':
-                # Handle transfer request
+                # 处理转账请求
                 from_account = request.get('from')
                 to_account = request.get('to')
                 amount = request.get('amount')
@@ -219,77 +197,87 @@ class TransactionCoordinator:
                 if from_account not in self.account_nodes or to_account not in self.account_nodes:
                     response = {
                         'status': 'error',
-                        'message': 'One or both accounts not found'
+                        'message': '一个或两个账户不存在'
                     }
                 else:
-                    # Start 2PC protocol
+                    # 检查节点状态，如果是故障节点，尝试使用备份节点
+                    from_node_failed = self.account_nodes.get(from_account, {}).get('status') == 'failed'
+                    to_node_failed = self.account_nodes.get(to_account, {}).get('status') == 'failed'
+                    
+                    # 如果源账户节点故障，尝试使用备份
+                    if from_node_failed:
+                        backup_from = self.node_pairs.get(from_account)
+                        if backup_from and backup_from in self.account_nodes:
+                            print(f"源账户 {from_account} 故障，使用备份节点 {backup_from}")
+                            from_account = backup_from
+                        else:
+                            response = {
+                                'status': 'error',
+                                'message': f'源账户 {from_account} 当前不可用，且没有可用的备份节点'
+                            }
+                            client.send(json.dumps(response).encode('utf-8'))
+                            return
+                    
+                    # 如果目标账户节点故障，尝试使用备份
+                    if to_node_failed:
+                        backup_to = self.node_pairs.get(to_account)
+                        if backup_to and backup_to in self.account_nodes:
+                            print(f"目标账户 {to_account} 故障，使用备份节点 {backup_to}")
+                            to_account = backup_to
+                        else:
+                            response = {
+                                'status': 'error',
+                                'message': f'目标账户 {to_account} 当前不可用，且没有可用的备份节点'
+                            }
+                            client.send(json.dumps(response).encode('utf-8'))
+                            return
+                    
+                    # 开始两阶段提交协议
                     transaction_id = str(uuid.uuid4())
                     success = self.execute_two_phase_commit(transaction_id, from_account, to_account, amount)
                     
                     if success:
+                        original_from = request.get('from')
+                        original_to = request.get('to')
                         response = {
                             'status': 'success',
-                            'message': f'Transfer of {amount} from {from_account} to {to_account} completed',
-                            'transaction_id': transaction_id
+                            'message': f'从 {original_from} 到 {original_to} 的 {amount} 转账已完成',
+                            'transaction_id': transaction_id,
+                            'used_backup': (from_account != original_from or to_account != original_to)
                         }
                     else:
                         response = {
                             'status': 'error',
-                            'message': 'Transfer failed during two-phase commit'
+                            'message': '转账在两阶段提交过程中失败'
                         }
             
-            elif command == 'init_accounts':
-                # Initialize accounts with initial balance
-                amount = request.get('amount', 10000)
-                success = True
-                
-                # Only initialize primary nodes (backups will be synced automatically)
-                primary_nodes = {n: info for n, info in self.account_nodes.items() 
-                                if info.get('role', 'primary') == 'primary'}
-                
-                for node_id, node_info in primary_nodes.items():
-                    try:
-                        host = self.node_hosts.get(node_id, 'localhost')
-                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                            s.connect((host, node_info['port']))
-                            init_request = {
-                                'command': 'init_balance',
-                                'amount': amount
-                            }
-                            s.send(json.dumps(init_request).encode('utf-8'))
-                            init_response = json.loads(s.recv(4096).decode('utf-8'))
-                            
-                            if init_response.get('status') != 'success':
-                                success = False
-                                break
-                    
-                    except Exception as e:
-                        print(f"Failed to initialize account {node_id}: {e}")
-                        success = False
-                        break
-                
-                if success:
-                    response = {
-                        'status': 'success',
-                        'message': f'All accounts initialized with {amount}'
-                    }
-                else:
-                    response = {
-                        'status': 'error',
-                        'message': 'Failed to initialize all accounts'
-                    }
-            
             elif command == 'get_balance':
-                # Handle balance query request
+                # 处理余额查询请求
                 account_id = request.get('account_id')
                 
                 if account_id not in self.account_nodes:
                     response = {
                         'status': 'error',
-                        'message': f'Account {account_id} not found'
+                        'message': f'账户 {account_id} 不存在'
                     }
                 else:
-                    # Forward request to account node
+                    # 检查节点状态，如果是故障节点，尝试使用备份节点
+                    node_failed = self.account_nodes.get(account_id, {}).get('status') == 'failed'
+                    
+                    if node_failed:
+                        backup_id = self.node_pairs.get(account_id)
+                        if backup_id and backup_id in self.account_nodes:
+                            print(f"账户 {account_id} 故障，使用备份节点 {backup_id} 查询余额")
+                            account_id = backup_id
+                        else:
+                            response = {
+                                'status': 'error',
+                                'message': f'账户 {account_id} 当前不可用，且没有可用的备份节点'
+                            }
+                            client.send(json.dumps(response).encode('utf-8'))
+                            return
+                    
+                    # 转发请求到账户节点
                     try:
                         node_info = self.account_nodes[account_id]
                         host = self.node_hosts.get(account_id, 'localhost')
@@ -302,20 +290,22 @@ class TransactionCoordinator:
                             balance_response = json.loads(s.recv(4096).decode('utf-8'))
                             
                             if balance_response.get('status') == 'success':
+                                original_account = request.get('account_id')
                                 response = {
                                     'status': 'success',
                                     'balance': balance_response.get('balance'),
-                                    'account_id': account_id
+                                    'account_id': original_account,
+                                    'used_backup': account_id != original_account
                                 }
                             else:
                                 response = {
                                     'status': 'error',
-                                    'message': f'Failed to get balance from account {account_id}'
+                                    'message': f'从账户 {account_id} 获取余额失败'
                                 }
                     except Exception as e:
                         response = {
                             'status': 'error',
-                            'message': f'Error accessing account {account_id}: {str(e)}'
+                            'message': f'访问账户 {account_id} 出错: {str(e)}'
                         }
             
             elif command == 'report_node_failure':
@@ -591,6 +581,65 @@ class TransactionCoordinator:
         except Exception as e:
             print(f"Error promoting backup to primary: {e}")
             return False
+
+    def simulate_failure(self, node_id):
+        """模拟节点故障并标记节点状态"""
+        with self.lock:
+            if node_id in self.account_nodes:
+                # 标记节点为故障状态
+                self.account_nodes[node_id]['status'] = 'failed'
+                self.account_nodes[node_id]['failure_time'] = time.time()
+                
+                print(f"节点 {node_id} 被标记为故障状态")
+                
+                # 检查是否有备份节点需要接管
+                backup_node_id = self.node_pairs.get(node_id)
+                
+                if backup_node_id and backup_node_id in self.account_nodes:
+                    print(f"备份节点 {backup_node_id} 将接管 {node_id} 的工作")
+                    # 调用备份节点接管函数
+                    self.promote_backup_to_primary(backup_node_id, node_id)
+                
+                self.save_data()
+                
+                return {
+                    'status': 'success',
+                    'message': f'节点 {node_id} 已被标记为故障状态',
+                    'backup_node': backup_node_id if backup_node_id else None
+                }
+            else:
+                return {
+                    'status': 'error',
+                    'message': f'节点 {node_id} 不存在'
+                }
+
+    def recover_node(self, node_id):
+        """恢复故障节点"""
+        with self.lock:
+            if node_id in self.account_nodes:
+                if self.account_nodes[node_id].get('status') == 'failed':
+                    # 清除故障状态
+                    self.account_nodes[node_id].pop('status', None)
+                    self.account_nodes[node_id].pop('failure_time', None)
+                    
+                    print(f"节点 {node_id} 已恢复正常状态")
+                    
+                    self.save_data()
+                    
+                    return {
+                        'status': 'success',
+                        'message': f'节点 {node_id} 已恢复正常状态'
+                    }
+                else:
+                    return {
+                        'status': 'error',
+                        'message': f'节点 {node_id} 当前不处于故障状态'
+                    }
+            else:
+                return {
+                    'status': 'error',
+                    'message': f'节点 {node_id} 不存在'
+                }
 
 if __name__ == "__main__":
     import sys

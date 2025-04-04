@@ -1,8 +1,14 @@
-
 import socket
 import json
 import time
 import sys
+import os
+
+# 添加项目根目录到Python路径，以便正确导入src包
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(current_dir)  # 获取项目根目录
+if root_dir not in sys.path:
+    sys.path.append(root_dir)  # 将项目根目录添加到Python路径
 
 # 配置 
 COORDINATOR_HOST = "localhost"  # 本地运行时使用localhost
@@ -40,6 +46,20 @@ class DemoScenarios:
                 print(f"备份节点 {response['backup_node']} 将接管")
         else:
             print(f"故障模拟失败: {response.get('message')}")
+        return response
+    
+    def recover_node(self, node_id):
+        """恢复故障节点"""
+        request = {
+            'command': 'recover_node',
+            'node_id': node_id
+        }
+        print(f"正在恢复节点 {node_id}...")
+        response = self.send_request(request)
+        if response['status'] == 'success':
+            print(f"节点 {node_id} 已恢复正常状态")
+        else:
+            print(f"节点恢复失败: {response.get('message')}")
         return response
     
     def check_node_status(self, node_id):
@@ -121,32 +141,98 @@ class DemoScenarios:
         # 列出所有账户
         self.list_accounts()
         
+        # 创建客户端对象
+        from src.client import BankClient
+        client = BankClient(coordinator_host=self.host, coordinator_port=self.port)
+        
+        # 初始化账户余额
+        print("\n初始化账户余额...")
+        response = client.initialize_accounts(10000)
+        if response['status'] == 'success':
+            print("所有账户已初始化余额为10000")
+        else:
+            print(f"初始化账户失败: {response.get('message')}")
+            return
+        
+        # 检查初始余额
+        print("\n检查初始余额...")
+        for account in ['a1', 'a2']:
+            response = client.get_balance(account)
+            if response['status'] == 'success':
+                print(f"账户 {account} 余额: {response.get('balance')}")
+        
         # 模拟a1节点故障
         print("\n模拟节点a1故障...")
         self.simulate_node_failure('a1')
         
         # 等待故障检测和恢复
-        print("\n等待故障检测和恢复过程...(5秒)")
-        time.sleep(5)
+        print("\n等待故障检测和恢复过程...(3秒)")
+        time.sleep(3)
         
         # 检查节点状态
         print("\n检查节点状态...")
         self.check_node_status('a1')
         self.check_node_status('a1b')
         
+        # 在故障期间查询余额
+        print("\n在节点故障期间查询余额...")
+        response = client.get_balance('a1')
+        if response['status'] == 'success':
+            print(f"账户 a1 余额: {response.get('balance')}")
+            if response.get('used_backup'):
+                print("(通过备份节点查询)")
+        else:
+            print(f"查询余额失败: {response.get('message')}")
+        
         # 在故障期间执行转账
         print("\n在主节点故障期间尝试转账...")
-        from src.client import BankClient
-        client = BankClient(coordinator_host=self.host, coordinator_port=self.port)
-        
         response = client.transfer('a1', 'a2', 500)
         if response['status'] == 'success':
             print("转账成功! (通过备份节点完成)")
         else:
             print(f"转账失败: {response.get('message')}")
         
-        # 检查账户余额
+        # 检查转账后余额
         print("\n检查转账后余额...")
+        for account in ['a1', 'a2']:
+            response = client.get_balance(account)
+            if response['status'] == 'success':
+                print(f"账户 {account} 余额: {response.get('balance', '未知')}")
+                if response.get('used_backup'):
+                    print("(通过备份节点查询)")
+        
+        # 恢复故障节点
+        print("\n恢复故障节点a1...")
+        self.recover_node('a1')
+        
+        # 等待节点恢复
+        print("\n等待节点恢复...(3秒)")
+        time.sleep(3)
+        
+        # 再次检查节点状态
+        print("\n再次检查节点状态...")
+        self.check_node_status('a1')
+        
+        # 恢复后查询余额
+        print("\n恢复后查询余额...")
+        response = client.get_balance('a1')
+        if response['status'] == 'success':
+            print(f"账户 a1 余额: {response.get('balance')}")
+            if response.get('used_backup'):
+                print("(通过备份节点查询)")
+        else:
+            print(f"查询余额失败: {response.get('message')}")
+        
+        # 恢复后执行转账
+        print("\n恢复后执行转账...")
+        response = client.transfer('a1', 'a2', 300)
+        if response['status'] == 'success':
+            print("转账成功!")
+        else:
+            print(f"转账失败: {response.get('message')}")
+        
+        # 最终检查余额
+        print("\n最终检查余额...")
         for account in ['a1', 'a2']:
             response = client.get_balance(account)
             print(f"账户 {account} 余额: {response.get('balance', '未知')}")
@@ -336,7 +422,8 @@ def print_menu():
     print("4. 列出所有账户")
     print("5. 检查节点状态")
     print("6. 模拟节点故障")
-    print("7. 改进版并发转账演示")
+    print("7. 恢复故障节点")
+    print("8. 改进版并发转账演示")
     print("0. 退出")
     print("请选择演示场景: ", end="")
 
@@ -375,6 +462,9 @@ def main():
                 node_id = input("请输入要模拟故障的节点ID: ").strip()
                 demo.simulate_node_failure(node_id)
             elif choice == '7':
+                node_id = input("请输入要恢复的节点ID: ").strip()
+                demo.recover_node(node_id)
+            elif choice == '8':
                 demo.run_improved_concurrent_transfers_demo()
             else:
                 print("无效选择，请重试")

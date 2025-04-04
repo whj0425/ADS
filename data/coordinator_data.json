@@ -2,13 +2,23 @@
   "account_nodes": {
     "a1": {
       "port": 5011,
-      "last_heartbeat": 1743774436.234998,
+      "last_heartbeat": 1743777195.897603,
       "role": "primary"
     },
     "a1b": {
       "port": 5012,
-      "last_heartbeat": 1743774432.258027,
+      "last_heartbeat": 1743777196.911187,
       "role": "backup"
+    },
+    "a2b": {
+      "port": 5022,
+      "last_heartbeat": 1743777196.83248,
+      "role": "primary"
+    },
+    "a2": {
+      "port": 5021,
+      "last_heartbeat": 1743777195.697265,
+      "role": "primary"
     }
   },
   "transactions": {},
@@ -17,6 +27,8 @@
   },
   "node_hosts": {
     "a1": "10.61.246.171",
-    "a1b": "10.61.246.171"
+    "a1b": "10.61.246.171",
+    "a2": "10.61.37.3",
+    "a2b": "10.61.37.3"
   }
 }
