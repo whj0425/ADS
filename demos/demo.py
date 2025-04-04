@@ -21,16 +21,29 @@ class DemoScenarios:
     
     def send_request(self, request):
         """向协调器发送请求"""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(5)
-                s.connect((self.host, self.port))
-                s.send(json.dumps(request).encode('utf-8'))
-                response = json.loads(s.recv(4096).decode('utf-8'))
-                return response
-        except Exception as e:
-            print(f"请求失败: {e}")
-            return {'status': 'error', 'message': str(e)}
+        max_retries = 2
+        retry_count = 0
+        last_error = None
+        
+        while retry_count <= max_retries:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(10)  # 增加超时时间到10秒
+                    s.connect((self.host, self.port))
+                    s.send(json.dumps(request).encode('utf-8'))
+                    response = json.loads(s.recv(4096).decode('utf-8'))
+                    return response
+            except Exception as e:
+                last_error = e
+                retry_count += 1
+                if retry_count <= max_retries:
+                    print(f"请求失败(尝试 {retry_count}/{max_retries}): {e}，正在重试...")
+                    time.sleep(1)  # 等待1秒后重试
+                else:
+                    print(f"请求失败: {e}，已达到最大重试次数。")
+        
+        # 如果所有重试均失败
+        return {'status': 'error', 'message': str(last_error)}
     
     def simulate_node_failure(self, node_id):
         """模拟节点故障"""
@@ -42,10 +55,28 @@ class DemoScenarios:
         response = self.send_request(request)
         if response['status'] == 'success':
             print(f"节点 {node_id} 已被标记为故障状态")
+            
+            # 显示最终节点状态
+            if 'final_node_status' in response:
+                print(f"节点最终状态: {response['final_node_status']}")
+            
             if response.get('backup_node'):
                 print(f"备份节点 {response['backup_node']} 将接管")
+                
+                # 检查备份节点是否成功提升
+                if response.get('backup_promoted', False):
+                    print(f"✅ 备份节点 {response['backup_node']} 已成功提升为主节点")
+                else:
+                    print(f"⚠️ 备份节点 {response['backup_node']} 提升过程可能未完成，但节点 {node_id} 仍被标记为故障")
+            else:
+                print(f"⚠️ 警告: 节点 {node_id} 没有备份节点，故障将导致服务不可用！")
+            
+            # 立即检查被模拟故障的节点状态，确认状态已改变
+            print("\n立即检查节点状态，确认故障模拟是否生效：")
+            self.check_node_status(node_id)
         else:
             print(f"故障模拟失败: {response.get('message')}")
+            print("请检查节点是否存在或系统是否运行正常")
         return response
     
     def recover_node(self, node_id):
@@ -76,8 +107,28 @@ class DemoScenarios:
             print(f"节点 {node_id} 状态: {status}, 角色: {role}")
             if response.get('backup_node'):
                 print(f"备份节点: {response['backup_node']}")
+            
+            # 显示节点的状态字段
+            if 'state' in response:
+                print(f"节点状态标记: {response['state']}")
+            
+            # 显示完整节点信息
+            if 'node_info' in response:
+                print(f"节点完整信息: {response['node_info']}")
+            
+            # 特别强调故障状态
+            if not response.get('is_active', True) or response.get('state') == 'failed':
+                print(f"⚠️ 警告: 节点 {node_id} 当前处于故障状态！")
+                if response.get('backup_node'):
+                    backup_node = response['backup_node']
+                    print(f"✅ 备份节点 {backup_node} 应该已接管其工作")
+                    # 检查备份节点状态
+                    self.check_node_status(backup_node)
+                else:
+                    print(f"❌ 该节点没有可用的备份节点！")
         else:
             print(f"状态检查失败: {response.get('message')}")
+            print(f"⚠️ 节点 {node_id} 可能无法访问或不存在")
         return response
     
     def list_accounts(self):
@@ -95,58 +146,21 @@ class DemoScenarios:
             print(f"获取账户列表失败: {response.get('message')}")
         return response
     
-    def run_transfer_demo(self):
-        """运行转账演示"""
-        print("\n=== 转账演示 ===")
+    def run_interactive_failure_recovery_demo(self):
+        """运行交互式故障恢复演示"""
+        print("\n=== 交互式故障恢复演示 ===")
+        print("本演示将引导您完成节点故障和恢复的完整流程，体验系统的高可用性特性")
         
         # 创建客户端对象
         from src.client import BankClient
         client = BankClient(coordinator_host=self.host, coordinator_port=self.port)
         
-        # 初始化账户余额
-        print("初始化账户余额...")
-        response = client.initialize_accounts(10000)
-        if response['status'] == 'success':
-            print("所有账户已初始化余额为10000")
-        else:
-            print(f"初始化账户失败: {response.get('message')}")
-            return
-        
-        # 检查账户余额
-        print("\n检查初始余额...")
-        for account in ['a1', 'a2']:
-            response = client.get_balance(account)
-            if response['status'] == 'success':
-                print(f"账户 {account} 余额: {response.get('balance')}")
-        
-        # 执行第一次转账
-        print("\n执行转账: a1 -> a2 (1000)...")
-        response = client.transfer('a1', 'a2', 1000)
-        if response['status'] == 'success':
-            print("转账成功!")
-        else:
-            print(f"转账失败: {response.get('message')}")
-        
-        # 再次检查余额
-        print("\n检查转账后余额...")
-        for account in ['a1', 'a2']:
-            response = client.get_balance(account)
-            if response['status'] == 'success':
-                print(f"账户 {account} 余额: {response.get('balance')}")
-    
-    def run_failure_recovery_demo(self):
-        """运行故障恢复演示"""
-        print("\n=== 故障恢复演示 ===")
-        
-        # 列出所有账户
+        # 提示第1步：查看当前可用节点
+        input("\n第1步：查看当前可用节点。按回车继续...")
         self.list_accounts()
         
-        # 创建客户端对象
-        from src.client import BankClient
-        client = BankClient(coordinator_host=self.host, coordinator_port=self.port)
-        
-        # 初始化账户余额
-        print("\n初始化账户余额...")
+        # 提示第2步：初始化账户
+        input("\n第2步：初始化所有账户余额为10000。按回车继续...")
         response = client.initialize_accounts(10000)
         if response['status'] == 'success':
             print("所有账户已初始化余额为10000")
@@ -154,88 +168,111 @@ class DemoScenarios:
             print(f"初始化账户失败: {response.get('message')}")
             return
         
-        # 检查初始余额
-        print("\n检查初始余额...")
+        # 提示第3步：查询余额
+        input("\n第3步：查询初始余额。按回车继续...")
         for account in ['a1', 'a2']:
             response = client.get_balance(account)
             if response['status'] == 'success':
                 print(f"账户 {account} 余额: {response.get('balance')}")
         
-        # 模拟a1节点故障
-        print("\n模拟节点a1故障...")
-        self.simulate_node_failure('a1')
+        # 提示第4步：模拟节点故障
+        node_to_fail = input("\n第4步：请输入要模拟故障的节点ID（推荐：a1）: ").strip()
+        if not node_to_fail:
+            node_to_fail = 'a1'
         
-        # 等待故障检测和恢复
-        print("\n等待故障检测和恢复过程...(3秒)")
-        time.sleep(3)
+        # 检查初始状态
+        print("\n故障模拟前先检查节点状态:")
+        self.check_node_status(node_to_fail)
         
-        # 检查节点状态
-        print("\n检查节点状态...")
-        self.check_node_status('a1')
-        self.check_node_status('a1b')
+        # 执行故障模拟
+        failure_response = self.simulate_node_failure(node_to_fail)
+        if failure_response['status'] == 'success':
+            print(f"\n节点 {node_to_fail} 已被模拟为故障状态")
+        else:
+            print(f"\n故障模拟失败: {failure_response.get('message')}")
+            return
         
-        # 在故障期间查询余额
-        print("\n在节点故障期间查询余额...")
-        response = client.get_balance('a1')
+        # 提示第5步：查看节点状态
+        input("\n第5步：检查节点状态。按回车继续...")
+        print("\n再次确认节点状态:")
+        self.check_node_status(node_to_fail)
+        backup_node = f"{node_to_fail}b"
+        self.check_node_status(backup_node)
+        
+        # 提示第6步：故障节点余额查询
+        input(f"\n第6步：尝试查询故障节点 {node_to_fail} 的余额（应自动重定向到备份节点）。按回车继续...")
+        response = client.get_balance(node_to_fail)
         if response['status'] == 'success':
-            print(f"账户 a1 余额: {response.get('balance')}")
+            print(f"账户 {node_to_fail} 余额: {response.get('balance')}")
             if response.get('used_backup'):
-                print("(通过备份节点查询)")
+                print(f"(通过备份节点 {backup_node} 查询)")
         else:
             print(f"查询余额失败: {response.get('message')}")
         
-        # 在故障期间执行转账
-        print("\n在主节点故障期间尝试转账...")
-        response = client.transfer('a1', 'a2', 500)
+        # 提示第7步：故障节点转账
+        input(f"\n第7步：尝试从故障节点 {node_to_fail} 转账（应自动使用备份节点）。按回车继续...")
+        transfer_amount = 500
+        transfer_to = 'a2' if node_to_fail != 'a2' else 'a1'
+        print(f"执行转账: {node_to_fail} -> {transfer_to} ({transfer_amount})...")
+        response = client.transfer(node_to_fail, transfer_to, transfer_amount)
         if response['status'] == 'success':
-            print("转账成功! (通过备份节点完成)")
+            print(f"转账成功! {response.get('message', '')}")
+            if response.get('used_backup'):
+                print("(通过备份节点完成)")
         else:
             print(f"转账失败: {response.get('message')}")
         
-        # 检查转账后余额
-        print("\n检查转账后余额...")
+        # 提示第8步：检查余额变化
+        input("\n第8步：检查转账后余额。按回车继续...")
         for account in ['a1', 'a2']:
             response = client.get_balance(account)
             if response['status'] == 'success':
-                print(f"账户 {account} 余额: {response.get('balance', '未知')}")
+                print(f"账户 {account} 余额: {response.get('balance')}")
                 if response.get('used_backup'):
                     print("(通过备份节点查询)")
         
-        # 恢复故障节点
-        print("\n恢复故障节点a1...")
-        self.recover_node('a1')
+        # 提示第9步：恢复故障节点
+        input(f"\n第9步：恢复故障节点 {node_to_fail}。按回车继续...")
+        self.recover_node(node_to_fail)
         
-        # 等待节点恢复
-        print("\n等待节点恢复...(3秒)")
-        time.sleep(3)
+        # 提示第10步：检查恢复后的节点状态
+        input("\n第10步：检查恢复后的节点状态。按回车继续...")
+        print("\n确认节点已恢复:")
+        self.check_node_status(node_to_fail)
         
-        # 再次检查节点状态
-        print("\n再次检查节点状态...")
-        self.check_node_status('a1')
-        
-        # 恢复后查询余额
-        print("\n恢复后查询余额...")
-        response = client.get_balance('a1')
+        # 提示第11步：恢复后查询余额
+        input(f"\n第11步：恢复后查询 {node_to_fail} 余额。按回车继续...")
+        response = client.get_balance(node_to_fail)
         if response['status'] == 'success':
-            print(f"账户 a1 余额: {response.get('balance')}")
+            print(f"账户 {node_to_fail} 余额: {response.get('balance')}")
             if response.get('used_backup'):
                 print("(通过备份节点查询)")
         else:
             print(f"查询余额失败: {response.get('message')}")
         
-        # 恢复后执行转账
-        print("\n恢复后执行转账...")
-        response = client.transfer('a1', 'a2', 300)
+        # 提示第12步：恢复后执行转账
+        input(f"\n第12步：恢复后执行另一笔转账。按回车继续...")
+        transfer_amount = 300
+        print(f"执行转账: {node_to_fail} -> {transfer_to} ({transfer_amount})...")
+        response = client.transfer(node_to_fail, transfer_to, transfer_amount)
         if response['status'] == 'success':
-            print("转账成功!")
+            print(f"转账成功!")
         else:
             print(f"转账失败: {response.get('message')}")
         
-        # 最终检查余额
-        print("\n最终检查余额...")
+        # 提示第13步：最终检查余额
+        input("\n第13步：最终检查所有账户余额。按回车继续...")
         for account in ['a1', 'a2']:
             response = client.get_balance(account)
             print(f"账户 {account} 余额: {response.get('balance', '未知')}")
+        
+        print("\n=== 交互式故障恢复演示完成 ===")
+        print("您已成功体验了：")
+        print("1. 节点故障模拟与检测")
+        print("2. 故障节点的自动重定向（查询和转账）")
+        print("3. 节点恢复过程")
+        print("4. 恢复后的正常功能")
+        print("\n整个过程展示了系统的高可用性和容错能力")
     
     def run_concurrent_transfers_demo(self):
         """运行并发转账演示"""
@@ -416,14 +453,11 @@ class DemoScenarios:
 def print_menu():
     """打印演示菜单"""
     print("\n=== 分布式银行系统演示 ===")
-    print("1. 转账演示")
-    print("2. 故障恢复演示")
-    print("3. 并发转账演示 (有问题)")
-    print("4. 列出所有账户")
-    print("5. 检查节点状态")
-    print("6. 模拟节点故障")
-    print("7. 恢复故障节点")
-    print("8. 改进版并发转账演示")
+    print("1. 交互式故障恢复演示")
+    print("2. 并发转账演示 (有问题)")
+    print("3. 检查节点状态")
+    print("4. 模拟节点故障")
+    print("5. 恢复故障节点")
     print("0. 退出")
     print("请选择演示场景: ", end="")
 
@@ -448,24 +482,18 @@ def main():
             if choice == '0':
                 break
             elif choice == '1':
-                demo.run_transfer_demo()
+                demo.run_interactive_failure_recovery_demo()
             elif choice == '2':
-                demo.run_failure_recovery_demo()
-            elif choice == '3':
                 demo.run_concurrent_transfers_demo()
-            elif choice == '4':
-                demo.list_accounts()
-            elif choice == '5':
+            elif choice == '3':
                 node_id = input("请输入要检查的节点ID: ").strip()
                 demo.check_node_status(node_id)
-            elif choice == '6':
+            elif choice == '4':
                 node_id = input("请输入要模拟故障的节点ID: ").strip()
                 demo.simulate_node_failure(node_id)
-            elif choice == '7':
+            elif choice == '5':
                 node_id = input("请输入要恢复的节点ID: ").strip()
                 demo.recover_node(node_id)
-            elif choice == '8':
-                demo.run_improved_concurrent_transfers_demo()
             else:
                 print("无效选择，请重试")
         except KeyboardInterrupt:

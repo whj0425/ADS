@@ -1,4 +1,10 @@
 {
   "balance": 10000,
-  "transaction_history": []
+  "transaction_history": [
+    {
+      "transaction_id": "660ab5ca-b94a-4849-a64a-14d83007363f",
+      "amount": -500,
+      "timestamp": 1743783457.998192
+    }
+  ]
 }

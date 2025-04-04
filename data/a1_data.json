@@ -1,4 +1,26 @@
 {
-  "balance": 10000,
-  "transaction_history": []
+  "balance": 10800,
+  "transaction_history": [
+    {
+      "transaction_id": "2ec862eb-0023-4256-8ce7-94e97f1de9de",
+      "type": "force_set_balance",
+      "balance_after": 9500,
+      "timestamp": 1743783461.609492
+    },
+    {
+      "transaction_id": "e22ebc61-2bc5-4499-95db-3d5d7a1f22fb",
+      "amount": -300,
+      "timestamp": 1743783471.154628
+    },
+    {
+      "transaction_id": "ed34eeb4-8f96-4928-b620-639cff7055a8",
+      "amount": 500,
+      "timestamp": 1743783523.559422
+    },
+    {
+      "transaction_id": "a8fb5f48-b2cc-4674-94c1-f51a75d2907c",
+      "amount": 300,
+      "timestamp": 1743783578.850519
+    }
+  ]
 }

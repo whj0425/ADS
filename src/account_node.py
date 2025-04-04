@@ -216,6 +216,32 @@ class AccountNode:
                         'message': 'Only backup nodes can be promoted to primary'
                     }
             
+            elif command == 'force_set_balance':
+                # Command from coordinator during recovery to sync state
+                new_balance = request.get('balance')
+                if new_balance is not None:
+                    with self.lock:
+                        print(f"Node {self.node_id}: Received force_set_balance. Old balance: {self.balance}, New balance: {new_balance}")
+                        self.balance = new_balance
+                        # Optionally add a history record
+                        self.transaction_history.append({
+                            'transaction_id': str(uuid.uuid4()),
+                            'type': 'force_set_balance',
+                            'balance_after': self.balance,
+                            'timestamp': time.time()
+                        })
+                        self.save_data()
+                        response = {
+                            'status': 'success',
+                            'message': 'Balance force set successfully',
+                            'new_balance': self.balance
+                        }
+                else:
+                    response = {
+                        'status': 'error',
+                        'message': 'Missing balance value for force_set_balance'
+                    }
+            
             client.send(json.dumps(response).encode('utf-8'))
         
         except Exception as e:
