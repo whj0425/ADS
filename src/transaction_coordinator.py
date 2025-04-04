@@ -13,7 +13,7 @@ class TransactionCoordinator:
         self.node_hosts = {}  # {node_id: host_ip} - 跟踪每个节点的主机地址
         self.transactions = {}  # {transaction_id: {'status': status, 'from': node_id, 'to': node_id, 'amount': amount}}
         self.lock = threading.Lock()
-        self.data_file = "coordinator_data.json"
+        self.data_file = "data/coordinator_data.json"
         self.node_pairs = {}  # {primary_id: backup_id} - tracks primary-backup relationships
         
         # Load data if exists

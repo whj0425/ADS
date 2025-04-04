@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import subprocess
 import time
 import os
@@ -6,14 +5,15 @@ import sys
 import signal
 import json
 
-# 网络配置
-COMPUTER_A_IP = "172.20.10.2"  # 请修改为电脑A的实际IP地址
-COMPUTER_B_IP = "172.20.10.9"  # 请修改为电脑B的实际IP地址
-
-# 端口配置
-COORDINATOR_PORT = 5010
-A2_PORT = 5021
-A2B_PORT = 5022
+# 从配置文件导入网络设置
+sys.path.append('.')
+from config.network_config import (
+    COMPUTER_A_IP, 
+    COMPUTER_B_IP, 
+    COORDINATOR_PORT,
+    A2_PORT,
+    A2B_PORT
+)
 
 # 进程列表，用于跟踪启动的进程
 processes = []
@@ -57,7 +57,7 @@ def create_account_data(node_id, initial_balance=10000):
     }
     
     try:
-        with open(f'src/{node_id}_data.json', 'w') as f:
+        with open(f'data/{node_id}_data.json', 'w') as f:
             json.dump(data, f, indent=2)
         print(f"已创建/更新账户节点 {node_id} 的数据文件")
     except Exception as e:

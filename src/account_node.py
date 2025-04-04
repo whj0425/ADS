@@ -14,7 +14,7 @@ class AccountNode:
         self.balance = 0
         self.transaction_history = []
         self.lock = threading.Lock()
-        self.data_file = f"{self.node_id}_data.json"
+        self.data_file = f"data/{self.node_id}_data.json"
         
         # Replication related attributes
         self.role = role  # 'primary' or 'backup'

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import subprocess
 import time
 import os
@@ -6,14 +5,15 @@ import sys
 import signal
 import json
 
-# 获取本机IP地址，这里需要填写电脑A的实际IP地址
-COMPUTER_A_IP = "172.20.10.2"  # 请修改为电脑A的实际IP地址
-COMPUTER_B_IP = "172.20.10.9"  # 请修改为电脑B的实际IP地址
-
-# 端口配置
-COORDINATOR_PORT = 5010
-A1_PORT = 5011
-A1B_PORT = 5012
+# 从配置文件导入网络设置
+sys.path.append('.')
+from config.network_config import (
+    COMPUTER_A_IP, 
+    COMPUTER_B_IP, 
+    COORDINATOR_PORT, 
+    A1_PORT, 
+    A1B_PORT
+)
 
 # 进程列表，用于跟踪启动的进程
 processes = []
@@ -57,7 +57,7 @@ def create_coordinator_config():
     }
     
     try:
-        with open('src/coordinator_data.json', 'w') as f:
+        with open('data/coordinator_data.json', 'w') as f:
             json.dump(config, f, indent=2)
         print("已创建/更新协调器配置文件")
     except Exception as e:
@@ -71,7 +71,7 @@ def create_account_data(node_id, initial_balance=10000):
     }
     
     try:
-        with open(f'src/{node_id}_data.json', 'w') as f:
+        with open(f'data/{node_id}_data.json', 'w') as f:
             json.dump(data, f, indent=2)
         print(f"已创建/更新账户节点 {node_id} 的数据文件")
     except Exception as e:
@@ -150,4 +150,4 @@ def main():
         signal_handler(None, None)
 
 if __name__ == "__main__":
-    main() 
+    main()

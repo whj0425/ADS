@@ -1,9 +1,12 @@
 import socket
 import json
 import sys
+import os
+sys.path.append('.')
+from config.network_config import COMPUTER_A_IP, COORDINATOR_PORT
 
 class BankClient:
-    def __init__(self, coordinator_host='172.20.10.2', coordinator_port=5010):
+    def __init__(self, coordinator_host=COMPUTER_A_IP, coordinator_port=COORDINATOR_PORT):
         self.coordinator_host = coordinator_host
         self.coordinator_port = coordinator_port
     
@@ -72,7 +75,7 @@ def main():
     if len(sys.argv) > 1:
         coordinator_port = int(sys.argv[1])
     else:
-        coordinator_port = 5010
+        coordinator_port = COORDINATOR_PORT
     
     client = BankClient(coordinator_port=coordinator_port)
     print(f"Bank Client initialized to connect to coordinator on port {coordinator_port}")
