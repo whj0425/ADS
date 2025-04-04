@@ -10,6 +10,7 @@ class TransactionCoordinator:
         self.coordinator_id = coordinator_id
         self.port = port
         self.account_nodes = {}  # {node_id: {'port': port, 'last_heartbeat': timestamp, 'role': role, 'backup': backup_node_id}}
+        self.node_hosts = {}  # {node_id: host_ip} - 跟踪每个节点的主机地址
         self.transactions = {}  # {transaction_id: {'status': status, 'from': node_id, 'to': node_id, 'amount': amount}}
         self.lock = threading.Lock()
         self.data_file = "coordinator_data.json"
@@ -39,6 +40,7 @@ class TransactionCoordinator:
                     self.account_nodes = data.get('account_nodes', {})
                     self.transactions = data.get('transactions', {})
                     self.node_pairs = data.get('node_pairs', {})
+                    self.node_hosts = data.get('node_hosts', {})
             except Exception as e:
                 print(f"Error loading coordinator data: {e}")
     
@@ -46,7 +48,8 @@ class TransactionCoordinator:
         data = {
             'account_nodes': self.account_nodes,
             'transactions': self.transactions,
-            'node_pairs': self.node_pairs
+            'node_pairs': self.node_pairs,
+            'node_hosts': self.node_hosts
         }
         with open(self.data_file, 'w') as f:
             json.dump(data, f, indent=2)
@@ -82,9 +85,17 @@ class TransactionCoordinator:
                 role = request.get('role', 'primary')  # Default to primary if not specified
                 backup_node = request.get('backup_node')
                 primary_node = request.get('primary_node')
+                client_addr = request.get('client_addr')  # 客户端地址，如果通过请求提供
                 
                 if node_type == 'account':
                     with self.lock:
+                        # 记录客户端地址，如果通过请求提供；否则使用连接的地址
+                        if not client_addr:
+                            client_addr, _ = client.getpeername()
+                        
+                        # Store node host mapping
+                        self.node_hosts[node_id] = client_addr
+                        
                         # Store node information
                         self.account_nodes[node_id] = {
                             'port': port,
@@ -238,8 +249,9 @@ class TransactionCoordinator:
                 
                 for node_id, node_info in primary_nodes.items():
                     try:
+                        host = self.node_hosts.get(node_id, 'localhost')
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                            s.connect(('localhost', node_info['port']))
+                            s.connect((host, node_info['port']))
                             init_request = {
                                 'command': 'init_balance',
                                 'amount': amount
@@ -280,8 +292,9 @@ class TransactionCoordinator:
                     # Forward request to account node
                     try:
                         node_info = self.account_nodes[account_id]
+                        host = self.node_hosts.get(account_id, 'localhost')
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                            s.connect(('localhost', node_info['port']))
+                            s.connect((host, node_info['port']))
                             balance_request = {
                                 'command': 'get_balance'
                             }
@@ -440,7 +453,8 @@ class TransactionCoordinator:
                     return False
             
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect(('localhost', node_info['port']))
+                host = self.node_hosts.get(account_id, 'localhost')
+                s.connect((host, node_info['port']))
                 prepare_request = {
                     'command': 'prepare_transfer',
                     'amount': amount,
@@ -480,7 +494,8 @@ class TransactionCoordinator:
                     return False
             
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect(('localhost', node_info['port']))
+                host = self.node_hosts.get(account_id, 'localhost')
+                s.connect((host, node_info['port']))
                 execute_request = {
                     'command': 'execute_transfer',
                     'transaction_id': transaction_id,
@@ -546,9 +561,10 @@ class TransactionCoordinator:
                 return False
             
             backup_port = self.account_nodes[backup_id]['port']
+            host = self.node_hosts.get(backup_id, 'localhost')
             
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect(('localhost', backup_port))
+                s.connect((host, backup_port))
                 promote_request = {
                     'command': 'become_primary'
                 }

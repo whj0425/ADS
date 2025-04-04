@@ -235,7 +235,8 @@ class AccountNode:
                         'port': self.port,
                         'role': self.role,
                         'backup_node': self.backup_node,
-                        'primary_node': self.primary_node
+                        'primary_node': self.primary_node,
+                        'client_addr': socket.gethostbyname(socket.gethostname())  # 发送本机IP地址
                     }
                     s.send(json.dumps(heartbeat).encode('utf-8'))
                     response = json.loads(s.recv(4096).decode('utf-8'))
