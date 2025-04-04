@@ -63,7 +63,7 @@ class AccountNode:
     def start_server(self):
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind(('localhost', self.port))
+        server.bind(('0.0.0.0', self.port))
         server.listen(5)
         
         while True:
