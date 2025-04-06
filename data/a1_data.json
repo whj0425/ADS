@@ -1,11 +1,41 @@
 {
-  "balance": 10000,
+  "balance": 9700,
   "transaction_history": [
     {
-      "transaction_id": "4897c65a-4719-4606-b365-4c827b2eb1f4",
+      "transaction_id": "6c6055b3-dedf-4d85-8a51-a14022f87b93",
       "type": "force_set_balance",
-      "balance_after": 10000,
-      "timestamp": 1743790031.164822
+      "balance_after": 9500,
+      "timestamp": 1743916744.344759
+    },
+    {
+      "transaction_id": "35a889a7-ec10-424d-ae81-22c13e1045d1",
+      "amount": -300,
+      "timestamp": 1743916746.807518
+    },
+    {
+      "transaction_id": "ba5614ef-8d72-41ef-8901-2dfb840cdb4a",
+      "amount": -100,
+      "timestamp": 1743916753.0852869
+    },
+    {
+      "transaction_id": "45555fbe-ffd1-4fa2-9d6a-e45ec315ee87",
+      "amount": 200,
+      "timestamp": 1743916753.211191
+    },
+    {
+      "transaction_id": "1684153a-5ad6-41c8-b891-61c16ab86c6a",
+      "amount": -300,
+      "timestamp": 1743916753.3016052
+    },
+    {
+      "transaction_id": "de2d4b64-2a4c-4616-beab-d89f89df7ca0",
+      "amount": -500,
+      "timestamp": 1743916753.502728
+    },
+    {
+      "transaction_id": "61b675ae-b2fb-492e-85f2-c54b24a4b5f7",
+      "amount": 400,
+      "timestamp": 1743916753.523833
     }
   ]
 }

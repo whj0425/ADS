@@ -2,29 +2,79 @@
   "account_nodes": {
     "a1": {
       "port": 5011,
-      "last_heartbeat": 1743790273.11251,
+      "last_heartbeat": 1743916775.00224,
       "role": "primary"
     },
     "a1b": {
       "port": 5012,
-      "last_heartbeat": 1743790269.125191,
+      "last_heartbeat": 1743916776.0129092,
       "role": "backup"
     },
     "a2": {
       "port": 5021,
-      "last_heartbeat": 1743790268.295406,
+      "last_heartbeat": 1743916774.8497121,
       "role": "primary"
     },
     "a2b": {
       "port": 5022,
-      "last_heartbeat": 1743790268.29456,
-      "role": "primary"
+      "last_heartbeat": 1743916775.968682,
+      "role": "backup"
     }
   },
-  "transactions": {},
+  "transactions": {
+    "2bc2139b-5bfb-47ae-bf9a-ef5af996d0d2": {
+      "status": "completed",
+      "from": "a1b",
+      "to": "a2",
+      "amount": 500,
+      "timestamp": 1743916742.0044649
+    },
+    "35a889a7-ec10-424d-ae81-22c13e1045d1": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 300,
+      "timestamp": 1743916746.793299
+    },
+    "ba5614ef-8d72-41ef-8901-2dfb840cdb4a": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 100,
+      "timestamp": 1743916753.075021
+    },
+    "45555fbe-ffd1-4fa2-9d6a-e45ec315ee87": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 200,
+      "timestamp": 1743916753.181254
+    },
+    "1684153a-5ad6-41c8-b891-61c16ab86c6a": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 300,
+      "timestamp": 1743916753.280033
+    },
+    "61b675ae-b2fb-492e-85f2-c54b24a4b5f7": {
+      "status": "completed",
+      "from": "a2",
+      "to": "a1",
+      "amount": 400,
+      "timestamp": 1743916753.381421
+    },
+    "de2d4b64-2a4c-4616-beab-d89f89df7ca0": {
+      "status": "completed",
+      "from": "a1",
+      "to": "a2",
+      "amount": 500,
+      "timestamp": 1743916753.482132
+    }
+  },
   "node_pairs": {
-    "a1": "a1b",
-    "a2": "a2b"
+    "a2": "a2b",
+    "a1": "a1b"
   },
   "node_hosts": {
     "a1": "127.0.0.1",

@@ -22,7 +22,7 @@ class DemoScenarios:
     def send_request(self, request):
         """向协调器发送请求"""
         max_retries = 2
-        retry_count = 0
+        retry_count = 1
         last_error = None
         
         while retry_count <= max_retries:
@@ -276,14 +276,8 @@ class DemoScenarios:
     
     def run_concurrent_transfers_demo(self):
         """运行并发转账演示"""
-        print("\n=== 并发转账演示 (存在问题的版本) ===")
-        print("注意：此演示故意保留了并发处理问题，用于展示分布式并发转账的常见问题")
-        print("问题包括：")
-        print("1. 并发请求处理不当 - 同时处理多个请求导致冲突")
-        print("2. 锁粒度过大 - 不相关账户的操作也会互相阻塞")
-        print("3. 错误处理不完善 - 转账失败时没有适当的恢复机制")
-        print("4. 缺乏事务状态追踪 - 无法追踪每笔交易的执行状态")
-        print("执行此演示后，可能会出现部分转账失败、余额查询超时或不一致的情况")
+        print("\n=== 并发转账演示 ===")
+
         
         # 创建客户端对象
         from src.client import BankClient
@@ -454,7 +448,7 @@ def print_menu():
     """打印演示菜单"""
     print("\n=== 分布式银行系统演示 ===")
     print("1. 交互式故障恢复演示")
-    print("2. 并发转账演示 (有问题)")
+    print("2. 并发转账演示")
     print("3. 检查节点状态")
     print("4. 模拟节点故障")
     print("5. 恢复故障节点")

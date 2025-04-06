@@ -1,5 +1,4 @@
-﻿
-**Project Assignment: Building Focused Distributed Systems**
+﻿**Project Assignment: Building Focused Distributed Systems**
 
 **Project Goals:** This project reinforces core distributed systems concepts through the design and
 
