@@ -1,10 +1,230 @@
 {
-  "balance": 9500,
+  "balance": 10037,
   "transaction_history": [
     {
-      "transaction_id": "2bc2139b-5bfb-47ae-bf9a-ef5af996d0d2",
-      "amount": -500,
-      "timestamp": 1743916742.0196218
+      "transaction_id": "40dbe412-9281-45e6-8cd8-b74542f370a8",
+      "amount": -35,
+      "timestamp": 1744031490.291688
+    },
+    {
+      "transaction_id": "d8b1b97a-a616-44a1-ba2e-5dcf8b02b660",
+      "amount": -37,
+      "timestamp": 1744031490.2919638
+    },
+    {
+      "transaction_id": "a73694ab-d5de-4ebf-aeea-03ca52b0e998",
+      "amount": -38,
+      "timestamp": 1744031490.3473449
+    },
+    {
+      "transaction_id": "20d465e9-8a51-479d-9c13-f91f597d87b9",
+      "amount": 30,
+      "timestamp": 1744031490.34765
+    },
+    {
+      "transaction_id": "24f5ca09-2a96-4e80-889f-ecf1839b27ea",
+      "amount": -36,
+      "timestamp": 1744031490.375819
+    },
+    {
+      "transaction_id": "eeba0926-d815-4bf0-b6ac-a876c5df48a4",
+      "amount": 37,
+      "timestamp": 1744031490.4146078
+    },
+    {
+      "transaction_id": "f0a578af-8d2e-4dd8-9106-65fb9d339c26",
+      "amount": 37,
+      "timestamp": 1744031490.440205
+    },
+    {
+      "transaction_id": "6768508e-f967-4545-836e-0ee8814a4160",
+      "amount": -11,
+      "timestamp": 1744031490.499907
+    },
+    {
+      "transaction_id": "84794ab9-8496-4580-9f44-ce8871bc2842",
+      "amount": -47,
+      "timestamp": 1744031490.5019279
+    },
+    {
+      "transaction_id": "43a23e66-5a9c-46e3-81bf-b6b0c1e53cc9",
+      "amount": -7,
+      "timestamp": 1744031490.502184
+    },
+    {
+      "transaction_id": "5bffa176-4ab8-45b9-9295-4c90bdb9ea2a",
+      "amount": -44,
+      "timestamp": 1744031490.502351
+    },
+    {
+      "transaction_id": "a585b471-09b1-4760-aee3-eae383b6bd2d",
+      "amount": -16,
+      "timestamp": 1744031490.546955
+    },
+    {
+      "transaction_id": "8a2ce050-fd02-4a85-98c5-37dbdbbbb8a9",
+      "amount": 22,
+      "timestamp": 1744031490.5857239
+    },
+    {
+      "transaction_id": "624d669f-8723-47e6-97ea-ab6506d15e42",
+      "amount": -16,
+      "timestamp": 1744031490.5927439
+    },
+    {
+      "transaction_id": "d414e3a9-eb17-432c-b509-9807013a872d",
+      "amount": 9,
+      "timestamp": 1744031490.63453
+    },
+    {
+      "transaction_id": "9ce7364e-dfdc-410e-a846-dc28de51e0cf",
+      "amount": 8,
+      "timestamp": 1744031490.687167
+    },
+    {
+      "transaction_id": "59969483-c5d3-4a1a-8056-25bf59440b56",
+      "amount": 44,
+      "timestamp": 1744031490.712713
+    },
+    {
+      "transaction_id": "58f0a2ee-28f0-4ec2-8a3c-041e60694274",
+      "amount": -29,
+      "timestamp": 1744031490.71333
+    },
+    {
+      "transaction_id": "3c730150-0a38-4f8f-88b5-d821673ed58b",
+      "amount": -39,
+      "timestamp": 1744031490.713656
+    },
+    {
+      "transaction_id": "ff88bf58-44a3-47e8-ad0d-c309af649e25",
+      "amount": -2,
+      "timestamp": 1744031490.72388
+    },
+    {
+      "transaction_id": "74fa14e1-6788-476d-8a10-c4a2d765403a",
+      "amount": 5,
+      "timestamp": 1744031490.741015
+    },
+    {
+      "transaction_id": "3208bfcc-a723-45de-b544-3b19985cacf4",
+      "amount": 10,
+      "timestamp": 1744031490.7413602
+    },
+    {
+      "transaction_id": "c8f6bec4-1f49-49a3-a305-56324e9a8210",
+      "amount": 15,
+      "timestamp": 1744031490.747349
+    },
+    {
+      "transaction_id": "6554056f-97a1-4d12-a425-bd90cc111db5",
+      "amount": 27,
+      "timestamp": 1744031490.750902
+    },
+    {
+      "transaction_id": "81d5f3dd-2044-48c8-a551-e0f37e018ac3",
+      "amount": -24,
+      "timestamp": 1744031490.7511628
+    },
+    {
+      "transaction_id": "4e8c1b9a-9388-43e7-9a3f-4c1705073d64",
+      "amount": -9,
+      "timestamp": 1744031490.756543
+    },
+    {
+      "transaction_id": "2b1ae667-e917-4dca-9ff7-d0a125bad65a",
+      "amount": 15,
+      "timestamp": 1744031490.756822
+    },
+    {
+      "transaction_id": "4cdd832d-90fb-448a-aadb-6840d36128c4",
+      "amount": 31,
+      "timestamp": 1744031490.836585
+    },
+    {
+      "transaction_id": "c816bbc5-157c-4bd9-8d33-339adda728b5",
+      "amount": 41,
+      "timestamp": 1744031490.837153
+    },
+    {
+      "transaction_id": "35d19433-e95d-4b29-8629-9d6ab3e3362e",
+      "amount": 12,
+      "timestamp": 1744031490.9010801
+    },
+    {
+      "transaction_id": "86a7b1f2-051d-4866-8cae-0cb664adb1d8",
+      "amount": -28,
+      "timestamp": 1744031490.90193
+    },
+    {
+      "transaction_id": "2c990d8a-bbb8-4b51-aca6-accfc1ebc5a4",
+      "amount": 24,
+      "timestamp": 1744031490.904521
+    },
+    {
+      "transaction_id": "57bb4fc6-d699-4e5f-8460-309893a7f12c",
+      "amount": -16,
+      "timestamp": 1744031490.90484
+    },
+    {
+      "transaction_id": "7a0caa00-5423-41c3-b2b3-f028508dc981",
+      "amount": 7,
+      "timestamp": 1744031490.906107
+    },
+    {
+      "transaction_id": "30e92972-52c8-4aad-ab8e-fd5ced88fb61",
+      "amount": -28,
+      "timestamp": 1744031490.90643
+    },
+    {
+      "transaction_id": "a86f5cb9-c52c-4420-8232-1e76e2b7e3c2",
+      "amount": 10,
+      "timestamp": 1744031490.9853692
+    },
+    {
+      "transaction_id": "f19595c1-6276-4dd2-924d-1fa8715ecce1",
+      "amount": 43,
+      "timestamp": 1744031490.985779
+    },
+    {
+      "transaction_id": "9f382d0f-c2be-4d02-b8d0-4a47981ce163",
+      "amount": 34,
+      "timestamp": 1744031490.988485
+    },
+    {
+      "transaction_id": "0bc8ce55-e058-4c34-841e-f95f8c708c9d",
+      "amount": -8,
+      "timestamp": 1744031491.060381
+    },
+    {
+      "transaction_id": "2717482b-8660-4605-bcd6-bfb14837a63e",
+      "amount": 38,
+      "timestamp": 1744031491.107616
+    },
+    {
+      "transaction_id": "f2df71e9-8d6a-4f42-829d-1ec5cf34fb02",
+      "amount": -23,
+      "timestamp": 1744031491.122663
+    },
+    {
+      "transaction_id": "58ab2e64-778d-4597-a262-6e281658fc45",
+      "amount": 20,
+      "timestamp": 1744031491.123011
+    },
+    {
+      "transaction_id": "a3df724e-a020-4751-b5c3-14ffcd35aba4",
+      "amount": -50,
+      "timestamp": 1744031491.311883
+    },
+    {
+      "transaction_id": "5906a8b5-842a-421b-8e15-2ecb460b5dcb",
+      "amount": 49,
+      "timestamp": 1744031491.730152
+    },
+    {
+      "transaction_id": "29647471-6a6f-4c6a-8adf-2094a1c6615e",
+      "amount": 12,
+      "timestamp": 1744031492.000905
     }
   ]
 }

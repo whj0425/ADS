@@ -7,16 +7,23 @@ import os
 import sys
 from pathlib import Path
 
-# 添加项目根目录到系统路径
+# Add project root to system path
 sys.path.append(str(Path(__file__).parent.parent))
 from config.network_config import COORDINATOR_PORT
 
 class TransactionCoordinator:
     def __init__(self, port=COORDINATOR_PORT, coordinator_id="c1"):
+        """
+        Initialize the transaction coordinator that manages distributed transactions.
+        
+        Args:
+            port: Port number for the coordinator to listen on
+            coordinator_id: Unique identifier for this coordinator
+        """
         self.coordinator_id = coordinator_id
         self.port = port
         self.account_nodes = {}  # {node_id: {'port': port, 'last_heartbeat': timestamp, 'role': role, 'backup': backup_node_id}}
-        self.node_hosts = {}  # {node_id: host_ip} - 跟踪每个节点的主机地址
+        self.node_hosts = {}  # {node_id: host_ip} - Track the host address for each node
         self.transactions = {}  # {transaction_id: {'status': status, 'from': node_id, 'to': node_id, 'amount': amount}}
         self.lock = threading.Lock()
         self.data_file = "data/coordinator_data.json"
@@ -39,6 +46,10 @@ class TransactionCoordinator:
         print(f"Registered account nodes: {list(self.account_nodes.keys())}")
     
     def load_data(self):
+        """
+        Load coordinator data from persistent storage.
+        Restores account nodes, transactions, and node pairing information.
+        """
         if os.path.exists(self.data_file):
             try:
                 with open(self.data_file, 'r') as f:
@@ -48,22 +59,26 @@ class TransactionCoordinator:
                     self.node_pairs = data.get('node_pairs', {})
                     self.node_hosts = data.get('node_hosts', {})
                     
-                    # 添加调试信息
-                    print(f"数据加载完成。节点状态：")
+                    # Debug information
+                    print(f"Data loading completed. Node status:")
                     for node_id, node_info in self.account_nodes.items():
                         status = node_info.get('status', 'active')
                         role = node_info.get('role', 'primary')
-                        print(f"  - 节点 {node_id}: 状态={status}, 角色={role}")
+                        print(f"  - Node {node_id}: status={status}, role={role}")
             except Exception as e:
                 print(f"Error loading coordinator data: {e}")
     
     def save_data(self):
-        # 添加调试信息
-        print(f"正在保存节点状态信息:")
+        """
+        Save coordinator data to persistent storage.
+        Writes account nodes, transactions, and node pairing information to a JSON file.
+        """
+        # Debug information
+        print(f"Saving node status information:")
         for node_id, node_info in self.account_nodes.items():
             status = node_info.get('status', 'active')
             role = node_info.get('role', 'primary')
-            print(f"  - 节点 {node_id}: 状态={status}, 角色={role}")
+            print(f"  - Node {node_id}: status={status}, role={role}")
             
         data = {
             'account_nodes': self.account_nodes,
@@ -72,17 +87,21 @@ class TransactionCoordinator:
             'node_hosts': self.node_hosts
         }
         
-        # 确保目录存在
+        # Ensure directory exists
         os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
         
         try:
             with open(self.data_file, 'w') as f:
                 json.dump(data, f, indent=2)
-            print(f"数据已保存到 {self.data_file}")
+            print(f"Data has been saved to {self.data_file}")
         except Exception as e:
-            print(f"保存数据时出错: {e}")
+            print(f"Error saving data: {e}")
     
     def start_server(self):
+        """
+        Start the TCP server to listen for incoming requests.
+        Creates a new thread for each client connection.
+        """
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind(('0.0.0.0', self.port))
@@ -95,6 +114,13 @@ class TransactionCoordinator:
             client_thread.start()
     
     def handle_request(self, client):
+        """
+        Handle incoming client requests.
+        Parses the JSON request and executes the appropriate command.
+        
+        Args:
+            client: Socket connection to the client
+        """
         try:
             data = client.recv(4096)
             if not data:
@@ -113,11 +139,11 @@ class TransactionCoordinator:
                 role_from_heartbeat = request.get('role', 'primary')  # Get role reported by node
                 backup_node = request.get('backup_node')
                 primary_node = request.get('primary_node')
-                client_addr = request.get('client_addr')  # 客户端地址，如果通过请求提供
+                client_addr = request.get('client_addr')  # Client address if provided through the request
                 
                 if node_type == 'account':
                     with self.lock:
-                        # 记录客户端地址，如果通过请求提供；否则使用连接的地址
+                        # Record client address if provided; otherwise use connection address
                         if not client_addr:
                             client_addr, _ = client.getpeername()
                         
@@ -199,89 +225,89 @@ class TransactionCoordinator:
                     }
             
             elif command == 'simulate_failure':
-                # 模拟节点故障的命令
+                # Command to simulate node failure
                 node_id = request.get('node_id')
                 
                 with self.lock:
                     if node_id in self.account_nodes:
-                        # 1. 首先无条件地标记节点为故障状态
-                        print(f"模拟前节点 {node_id} 状态: {self.account_nodes[node_id].get('status', 'active')}")
+                        # 1. First unconditionally mark the node as failed
+                        print(f"Node {node_id} status before simulation: {self.account_nodes[node_id].get('status', 'active')}")
                         self.account_nodes[node_id]['status'] = 'failed'
                         self.account_nodes[node_id]['failure_time'] = time.time()
-                        print(f"节点 {node_id} 已被标记为故障状态: {self.account_nodes[node_id]}")
+                        print(f"Node {node_id} has been marked as failed: {self.account_nodes[node_id]}")
                         
-                        # 2. 立即保存状态变更到磁盘
+                        # 2. Immediately save state changes to disk
                         self.save_data()
                         
-                        # 3. 再次确认节点状态已变更
-                        assert self.account_nodes[node_id]['status'] == 'failed', "节点状态未成功变更！"
-                        print(f"确认节点 {node_id} 状态已更新为: {self.account_nodes[node_id].get('status')}")
+                        # 3. Confirm the node status has been changed
+                        assert self.account_nodes[node_id]['status'] == 'failed', "Node status was not changed successfully!"
+                        print(f"Confirmed node {node_id} status has been updated to: {self.account_nodes[node_id].get('status')}")
                         
-                        # 4. 构建基本响应
+                        # 4. Build basic response
                         backup_node_id = self.node_pairs.get(node_id)
                         response = {
                             'status': 'success',
-                            'message': f'节点 {node_id} 已被标记为故障状态',
+                            'message': f'Node {node_id} has been marked as failed',
                             'backup_node': backup_node_id,
                             'node_status': self.account_nodes[node_id].get('status')
                         }
                         
-                        # 5. 尝试提升备份节点，但这不影响节点已被标记为故障的状态
+                        # 5. Try to promote backup node, but this doesn't affect the failed status of the node
                         backup_promoted = False
                         if backup_node_id and backup_node_id in self.account_nodes:
-                            print(f"尝试提升备份节点 {backup_node_id} 接管 {node_id} 的工作")
+                            print(f"Attempting to promote backup node {backup_node_id} to take over for {node_id}")
                             
-                            # 首先在协调器端更新备份节点角色为主节点
+                            # First update the backup node role to primary in the coordinator
                             try:
                                 previous_role = self.account_nodes[backup_node_id].get('role', 'backup')
                                 self.account_nodes[backup_node_id]['role'] = 'primary'
-                                print(f"备份节点 {backup_node_id} 角色从 {previous_role} 更新为 {self.account_nodes[backup_node_id]['role']}")
+                                print(f"Backup node {backup_node_id} role updated from {previous_role} to {self.account_nodes[backup_node_id]['role']}")
                                 
-                                # 更新节点对应关系
+                                # Update node pairing relationships
                                 self.node_pairs.pop(node_id, None)
                                 self.save_data()
                                 backup_promoted = True
-                                print(f"备份节点 {backup_node_id} 在协调器中已被提升为主节点")
+                                print(f"Backup node {backup_node_id} has been promoted to primary in the coordinator")
                                 
-                                # 尝试通知备份节点，但即使失败也视为成功
+                                # Try to notify the backup node, but consider it successful even if this fails
                                 try:
                                     backup_port = self.account_nodes[backup_node_id]['port']
                                     host = self.node_hosts.get(backup_node_id, 'localhost')
                                     
                                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                                        s.settimeout(2)  # 短超时，避免长时间等待
+                                        s.settimeout(2)  # Short timeout to avoid long waits
                                         s.connect((host, backup_port))
                                         promote_request = {
                                             'command': 'become_primary'
                                         }
                                         s.send(json.dumps(promote_request).encode('utf-8'))
-                                        # 忽略响应，我们已经在协调器端完成了状态更新
+                                        # Ignore response, we've already updated the status in the coordinator
                                 except Exception as e:
-                                    print(f"通知备份节点时出错，但这不影响状态更新: {e}")
+                                    print(f"Error while notifying the backup node, but this doesn't affect the status update: {e}")
                             except Exception as e:
-                                print(f"提升备份节点过程中出错: {e}")
+                                print(f"Error during backup node promotion: {e}")
                         
-                        # 6. 最后再次检查并确认状态
-                        print(f"最终确认节点 {node_id} 状态: {self.account_nodes[node_id].get('status', '未知')}")
+                        # 6. Final status check and confirmation
+                        print(f"Final confirmation of node {node_id} status: {self.account_nodes[node_id].get('status', 'unknown')}")
                         if backup_node_id:
-                            print(f"最终确认备份节点 {backup_node_id} 角色: {self.account_nodes[backup_node_id].get('role', '未知')}")
+                            print(f"Final confirmation of backup node {backup_node_id} role: {self.account_nodes[backup_node_id].get('role', 'unknown')}")
                         
-                        # 7. 更新响应以包含备份节点提升状态
+                        # 7. Update response to include backup promotion status
                         response['backup_promoted'] = backup_promoted
                         response['final_node_status'] = self.account_nodes[node_id].get('status')
                     else:
                         response = {
                             'status': 'error',
-                            'message': f'节点 {node_id} 不存在'
+                            'message': f'Node {node_id} does not exist'
                         }
             
             elif command == 'recover_node':
-                # 恢复节点的命令
+                # Command to recover a node
                 node_id = request.get('node_id') # The node being recovered (e.g., a1)
                 
                 with self.lock:
                     if node_id in self.account_nodes:
-                        print(f"恢复前节点 {node_id} 状态: {self.account_nodes[node_id].get('status', 'active')}")
+                        print(f"Node {node_id} status before recovery: {self.account_nodes[node_id].get('status', 'active')}")
                         
                         if self.account_nodes[node_id].get('status') == 'failed':
                             # Node is indeed marked as failed, proceed with recovery
@@ -294,7 +320,7 @@ class TransactionCoordinator:
                             sync_success = False
 
                             if takeover_node_info and takeover_node_info.get('role') == 'primary':
-                                print(f"找到接管节点 {potential_takeover_node_id}，尝试同步状态...")
+                                print(f"Found takeover node {potential_takeover_node_id}, attempting to sync state...")
                                 try:
                                     # Step 2: Get the current balance from the takeover node
                                     host = self.node_hosts.get(potential_takeover_node_id, 'localhost')
@@ -308,12 +334,12 @@ class TransactionCoordinator:
                                         
                                         if balance_response.get('status') == 'success':
                                             latest_balance = balance_response.get('balance')
-                                            print(f"从 {potential_takeover_node_id} 获取到最新余额: {latest_balance}")
+                                            print(f"Retrieved latest balance from {potential_takeover_node_id}: {latest_balance}")
                                         else:
-                                            print(f"无法从 {potential_takeover_node_id} 获取余额: {balance_response.get('message')}")
+                                            print(f"Unable to retrieve balance from {potential_takeover_node_id}: {balance_response.get('message')}")
                                 
                                 except Exception as e:
-                                    print(f"连接接管节点 {potential_takeover_node_id} 获取余额时出错: {e}")
+                                    print(f"Error connecting to takeover node {potential_takeover_node_id} to get balance: {e}")
 
                                 # Step 3: If balance was obtained, force set it on the recovering node
                                 if latest_balance is not None:
@@ -334,13 +360,13 @@ class TransactionCoordinator:
                                             
                                             if set_response.get('status') == 'success':
                                                 sync_success = True
-                                                print(f"成功将最新余额同步到恢复中的节点 {node_id}")
+                                                print(f"Successfully synchronized latest balance to recovering node {node_id}")
                                             else:
-                                                 print(f"节点 {node_id} 同步余额失败: {set_response.get('message')}")
+                                                 print(f"Node {node_id} balance synchronization failed: {set_response.get('message')}")
                                     except Exception as e:
-                                        print(f"连接恢复中节点 {node_id} 设置余额时出错: {e}")
+                                        print(f"Error connecting to recovering node {node_id} to set balance: {e}")
                             else:
-                                print(f"警告: 无法找到有效的接管节点 {potential_takeover_node_id} 来同步状态。节点 {node_id} 将使用其本地状态恢复。")
+                                print(f"Warning: No valid takeover node {potential_takeover_node_id} found to sync state. Node {node_id} will recover using its local state.")
                                 # Decide if recovery should proceed without sync or fail
                                 # For simulation, we might allow it, but log a warning.
                                 sync_success = True # Allow recovery without sync for now
@@ -351,11 +377,11 @@ class TransactionCoordinator:
                                 self.account_nodes[node_id]['role'] = 'primary' # Explicitly set recovered node to primary
                                 self.account_nodes[node_id].pop('status', None)
                                 self.account_nodes[node_id].pop('failure_time', None)
-                                print(f"节点 {node_id} 已标记为活跃状态，角色设置为 'primary'")
+                                print(f"Node {node_id} has been marked as active and role set to 'primary'")
 
                                 # Step 5: Reset the takeover node (original backup) back to 'backup' role
                                 if takeover_node_info and takeover_node_info.get('role') == 'primary':
-                                    print(f"尝试将接管节点 {potential_takeover_node_id} 角色重置回 'backup'")
+                                    print(f"Attempting to reset takeover node {potential_takeover_node_id} role to 'backup'")
                                     try:
                                         # Notify the takeover node to become backup
                                         takeover_host = self.node_hosts.get(potential_takeover_node_id, 'localhost')
@@ -370,99 +396,99 @@ class TransactionCoordinator:
                                                 backup_res_data = s.recv(1024)
                                                 backup_res = json.loads(backup_res_data.decode('utf-8'))
                                                 if backup_res.get('status') == 'success':
-                                                    print(f"节点 {potential_takeover_node_id} 确认已切换回 backup 角色")
+                                                    print(f"Node {potential_takeover_node_id} confirmed switch back to backup role")
                                                 else:
-                                                    print(f"警告: 节点 {potential_takeover_node_id} 切换回 backup 时返回错误: {backup_res.get('message')}")
+                                                    print(f"Warning: Node {potential_takeover_node_id} returned error when switching to backup: {backup_res.get('message')}")
                                             except socket.timeout:
-                                                print(f"警告: 等待节点 {potential_takeover_node_id} 确认切换回 backup 时超时")
+                                                print(f"Warning: Timeout waiting for node {potential_takeover_node_id} to confirm switch to backup")
                                             except Exception as e_recv:
-                                                print(f"警告: 读取节点 {potential_takeover_node_id} 切换回 backup 响应时出错: {e_recv}")
+                                                print(f"Warning: Error reading response from node {potential_takeover_node_id} switch to backup: {e_recv}")
 
                                         # Update coordinator state regardless of notification success
                                         self.account_nodes[potential_takeover_node_id]['role'] = 'backup'
                                         # Re-establish the pairing in node_pairs
                                         self.node_pairs[node_id] = potential_takeover_node_id
-                                        print(f"协调器已将节点 {potential_takeover_node_id} 角色更新为 'backup' 并恢复配对关系 {node_id} -> {potential_takeover_node_id}")
+                                        print(f"Coordinator has updated node {potential_takeover_node_id} role to 'backup' and restored pairing relationship {node_id} -> {potential_takeover_node_id}")
 
                                     except Exception as e_notify:
-                                        print(f"错误: 尝试通知节点 {potential_takeover_node_id} 切换回 backup 时出错: {e_notify}. 协调器状态可能与节点不一致!")
+                                        print(f"Error: Failed to notify node {potential_takeover_node_id} to switch to backup: {e_notify}. Coordinator state may be inconsistent with node state!")
                                         # Decide on error handling: proceed with coordinator state update?
                                         # For now, let's update coordinator state but log the inconsistency risk
                                         self.account_nodes[potential_takeover_node_id]['role'] = 'backup'
                                         self.node_pairs[node_id] = potential_takeover_node_id
-                                        print(f"警告: 尽管通知失败，协调器仍将 {potential_takeover_node_id} 角色设为 'backup' 并恢复配对")
+                                        print(f"Warning: Despite notification failure, coordinator has set {potential_takeover_node_id} role to 'backup' and restored pairing")
                                 else:
-                                    print(f"未找到接管节点 {potential_takeover_node_id} 或其角色不是 primary，无需重置角色")
+                                    print(f"No takeover node {potential_takeover_node_id} found or its role is not primary, no need to reset role")
 
 
                                 # Step 6: Save final state and prepare response
-                                print(f"最终确认节点 {node_id} 状态: {self.account_nodes[node_id]}")
+                                print(f"Final confirmation of node {node_id} state: {self.account_nodes[node_id]}")
                                 if potential_takeover_node_id in self.account_nodes:
-                                     print(f"最终确认节点 {potential_takeover_node_id} 状态: {self.account_nodes[potential_takeover_node_id]}")
-                                print(f"最终确认配对关系: {self.node_pairs.get(node_id)}")
+                                     print(f"Final confirmation of node {potential_takeover_node_id} state: {self.account_nodes[potential_takeover_node_id]}")
+                                print(f"Final confirmation of pairing relationship: {self.node_pairs.get(node_id)}")
 
                                 self.save_data()
-                                print(f"确认节点 {node_id} 当前状态: {self.account_nodes[node_id].get('status', 'active')}, 角色: {self.account_nodes[node_id].get('role')}")
+                                print(f"Confirmed node {node_id} current status: {self.account_nodes[node_id].get('status', 'active')}, role: {self.account_nodes[node_id].get('role')}")
                                 if potential_takeover_node_id in self.account_nodes:
-                                    print(f"确认节点 {potential_takeover_node_id} 当前状态: {self.account_nodes[potential_takeover_node_id].get('status', 'active')}, 角色: {self.account_nodes[potential_takeover_node_id].get('role')}")
+                                    print(f"Confirmed node {potential_takeover_node_id} current status: {self.account_nodes[potential_takeover_node_id].get('status', 'active')}, role: {self.account_nodes[potential_takeover_node_id].get('role')}")
 
                                 response = {
                                     'status': 'success',
-                                    'message': f'节点 {node_id} 已恢复正常状态并设为 primary。节点 {potential_takeover_node_id} 已重置为 backup。' + (' (同步了最新余额)' if latest_balance is not None else ' (未执行状态同步)'),
+                                    'message': f'Node {node_id} has been restored to normal state and set as primary. Node {potential_takeover_node_id} has been reset to backup.' + (' (Latest balance synchronized)' if latest_balance is not None else ' (State synchronization not performed)'),
                                     'node_info': self.account_nodes[node_id],
                                     'backup_node_info': self.account_nodes.get(potential_takeover_node_id)
                                 }
                             else:
-                                print(f"节点 {node_id} 状态同步失败，恢复中止。")
+                                print(f"Node {node_id} state synchronization failed, recovery aborted.")
                                 response = {
                                     'status': 'error',
-                                    'message': f'节点 {node_id} 状态同步失败，无法恢复。'
+                                    'message': f'Node {node_id} state synchronization failed, cannot recover.'
                                 }
                         else:
-                            print(f"节点 {node_id} 当前不处于故障状态: {self.account_nodes[node_id]}")
+                            print(f"Node {node_id} is not currently in failed state: {self.account_nodes[node_id]}")
                             response = {
                                 'status': 'error',
-                                'message': f'节点 {node_id} 当前不处于故障状态',
+                                'message': f'Node {node_id} is not currently in failed state',
                                 'node_info': self.account_nodes[node_id]
                             }
                     else:
                         response = {
                             'status': 'error',
-                            'message': f'节点 {node_id} 不存在'
+                            'message': f'Node {node_id} does not exist'
                         }
             
             elif command == 'check_node_status':
-                # 检查节点状态命令
+                # Command to check node status
                 node_id = request.get('node_id')
                 
                 with self.lock:
                     if node_id in self.account_nodes:
                         node_info = self.account_nodes[node_id]
-                        # 直接检查status字段是否为'failed'
+                        # Directly check if status field is 'failed'
                         is_failed = node_info.get('status') == 'failed'
                         is_active = not is_failed
                         backup_node_id = self.node_pairs.get(node_id)
                         
-                        # 调试信息
-                        print(f"DEBUG - 节点信息: {node_info}")
-                        print(f"DEBUG - 节点 {node_id} 状态: {'failed' if is_failed else 'active'}")
+                        # Debug information
+                        print(f"DEBUG - Node info: {node_info}")
+                        print(f"DEBUG - Node {node_id} status: {'failed' if is_failed else 'active'}")
                         
-                        # 直接从内存中获取所有状态信息
+                        # Get all status information directly from memory
                         response = {
                             'status': 'success',
                             'node_id': node_id,
                             'is_active': is_active,
                             'role': node_info.get('role', 'primary'),
                             'backup_node': backup_node_id,
-                            'state': 'failed' if is_failed else 'active',  # 确保状态与is_active一致
-                            'node_info': node_info,  # 返回完整节点信息用于调试
+                            'state': 'failed' if is_failed else 'active',  # Ensure state is consistent with is_active
+                            'node_info': node_info,  # Return complete node info for debugging
                             'last_heartbeat': node_info.get('last_heartbeat'),
                             'port': node_info.get('port')
                         }
                     else:
                         response = {
                             'status': 'error',
-                            'message': f'节点 {node_id} 不存在'
+                            'message': f'Node {node_id} does not exist'
                         }
             
             elif command == 'transfer':
@@ -471,80 +497,80 @@ class TransactionCoordinator:
                 to_account = request.get('to')
                 amount = request.get('amount')
                 
-                # 记录原始账户ID
+                # Record original account IDs
                 original_from = from_account
                 original_to = to_account
                 
                 if from_account not in self.account_nodes or to_account not in self.account_nodes:
                     response = {
                         'status': 'error',
-                        'message': '一个或两个账户不存在'
+                        'message': 'One or both accounts do not exist'
                     }
                 else:
-                    # 检查节点状态，如果是故障节点，立即重定向到备份节点
+                    # Check node status, if failed immediately redirect to backup node
                     from_node_failed = self.account_nodes.get(from_account, {}).get('status') == 'failed'
                     to_node_failed = self.account_nodes.get(to_account, {}).get('status') == 'failed'
                     
-                    # 如果源账户节点故障，重定向到备份
+                    # If source account node failed, redirect to backup
                     redirected = False
                     if from_node_failed:
                         backup_from = self.node_pairs.get(from_account)
                         if backup_from and backup_from in self.account_nodes:
-                            print(f"源账户 {from_account} 已故障，重定向到备份节点 {backup_from}")
+                            print(f"Source account {from_account} has failed, redirecting to backup node {backup_from}")
                             from_account = backup_from
                             redirected = True
                         else:
                             # NEW LOGIC: If not in node_pairs, try deducing backup ID and check if it's the new primary
                             potential_backup_id = f"{from_account}b"
                             if potential_backup_id in self.account_nodes and self.account_nodes[potential_backup_id].get('role') == 'primary':
-                                print(f"源账户 {from_account} 已故障，重定向到已提升为主节点的原备份 {potential_backup_id}")
+                                print(f"Source account {from_account} has failed, redirecting to backup node {potential_backup_id} that has been promoted to primary")
                                 from_account = potential_backup_id
                                 redirected = True
                             else:
                                 response = {
                                     'status': 'error',
-                                    'message': f'源账户 {original_from} 当前不可用且没有可用的接管节点' # Use original ID in error message
+                                    'message': f'Source account {original_from} is currently unavailable and has no available takeover node' # Use original ID in error message
                                 }
                                 client.send(json.dumps(response).encode('utf-8'))
                                 return
 
-                    # 如果目标账户节点故障，重定向到备份
+                    # If target account node failed, redirect to backup
                     if to_node_failed:
                         backup_to = self.node_pairs.get(to_account)
                         if backup_to and backup_to in self.account_nodes:
-                            print(f"目标账户 {to_account} 已故障，重定向到备份节点 {backup_to}")
+                            print(f"Target account {to_account} has failed, redirecting to backup node {backup_to}")
                             to_account = backup_to
                             redirected = True
                         else:
                             # NEW LOGIC: If not in node_pairs, try deducing backup ID and check if it's the new primary
                             potential_backup_id = f"{to_account}b"
                             if potential_backup_id in self.account_nodes and self.account_nodes[potential_backup_id].get('role') == 'primary':
-                                print(f"目标账户 {to_account} 已故障，重定向到已提升为主节点的原备份 {potential_backup_id}")
+                                print(f"Target account {to_account} has failed, redirecting to backup node {potential_backup_id} that has been promoted to primary")
                                 to_account = potential_backup_id
                                 redirected = True
                             else:
                                 response = {
                                     'status': 'error',
-                                    'message': f'目标账户 {original_to} 当前不可用且没有可用的接管节点' # Use original ID in error message
+                                    'message': f'Target account {original_to} is currently unavailable and has no available takeover node' # Use original ID in error message
                                 }
                                 client.send(json.dumps(response).encode('utf-8'))
                                 return
                     
-                    # 开始两阶段提交协议
+                    # Start two-phase commit protocol
                     transaction_id = str(uuid.uuid4())
                     success = self.execute_two_phase_commit(transaction_id, from_account, to_account, amount)
                     
                     if success:
                         response = {
                             'status': 'success',
-                            'message': f'从 {original_from} 到 {original_to} 的 {amount} 转账已完成',
+                            'message': f'From {original_from} to {original_to} {amount} transfer completed',
                             'transaction_id': transaction_id,
                             'used_backup': redirected
                         }
                     else:
                         response = {
                             'status': 'error',
-                            'message': '转账在两阶段提交过程中失败'
+                            'message': 'Transfer failed in two-phase commit process'
                         }
             
             elif command == 'get_balance':
@@ -557,37 +583,37 @@ class TransactionCoordinator:
                         'message': f'Account {account_id} not found'
                     }
                 else:
-                    # 记录原始账户ID以便响应中显示
+                    # Record original account ID for response display
                     original_account = account_id
                     
-                    # 检查节点状态，如果是故障节点，立即重定向到备份节点
+                    # Check node status, if failed immediately redirect to backup node
                     node_failed = self.account_nodes.get(account_id, {}).get('status') == 'failed'
                     
                     if node_failed:
                         backup_id = self.node_pairs.get(account_id)
                         if backup_id and backup_id in self.account_nodes:
-                            print(f"账户 {account_id} 已故障，重定向到备份节点 {backup_id}")
+                            print(f"Account {account_id} has failed, redirecting to backup node {backup_id}")
                             account_id = backup_id
                         else:
                             # NEW LOGIC: If not in node_pairs, try deducing backup ID and check if it's the new primary
                             potential_backup_id = f"{account_id}b"
                             if potential_backup_id in self.account_nodes and self.account_nodes[potential_backup_id].get('role') == 'primary':
-                                print(f"账户 {original_account} 已故障，重定向到已提升为主节点的原备份 {potential_backup_id}")
+                                print(f"Account {original_account} has failed, redirecting to backup node {potential_backup_id} that has been promoted to primary")
                                 account_id = potential_backup_id # Update account_id to the promoted node
                             else:
                                 response = {
                                     'status': 'error',
-                                    'message': f'账户 {original_account} 当前不可用且没有可用的接管节点' # Use original ID in error message
+                                    'message': f'Account {original_account} is currently unavailable and has no available takeover node' # Use original ID in error message
                                 }
                                 client.send(json.dumps(response).encode('utf-8'))
                                 return
                     
-                    # 转发请求到账户节点
+                    # Forward request to account node
                     try:
                         node_info = self.account_nodes[account_id]
                         host = self.node_hosts.get(account_id, 'localhost')
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                            s.settimeout(3)  # 增加超时到3秒，避免长时间等待
+                            s.settimeout(3)  # Increase timeout to 3 seconds, avoid long waits
                             s.connect((host, node_info['port']))
                             balance_request = {
                                 'command': 'get_balance'
@@ -605,12 +631,12 @@ class TransactionCoordinator:
                             else:
                                 response = {
                                     'status': 'error',
-                                    'message': f'无法从账户 {account_id} 获取余额'
+                                    'message': f'Unable to retrieve balance from account {account_id}'
                                 }
                     except Exception as e:
                         response = {
                             'status': 'error',
-                            'message': f'访问账户 {account_id} 时出错: {str(e)}'
+                            'message': f'Error accessing account {account_id}: {str(e)}'
                         }
             
             elif command == 'report_node_failure':
@@ -809,17 +835,17 @@ class TransactionCoordinator:
     
     def prepare_transfer(self, account_id, amount, is_sender):
         try:
-            # 首先确保我们只对主节点进行操作
+            # First ensure we only operate on primary nodes
             node_info = self.account_nodes.get(account_id)
             if not node_info:
                 return False
             
-            # 如果这是备份节点，需要找到对应的主节点
+            # If this is a backup node, find its corresponding primary node
             node_role = node_info.get('role', 'primary')
             if node_role == 'backup':
-                # 对于备份节点(例如a1b)，找到其对应的主节点(a1)
+                # For backup node(e.g., a1b), find its corresponding primary node(a1)
                 if account_id.endswith('b') and len(account_id) > 1:
-                    primary_id = account_id[:-1]  # 去掉'b'后缀
+                    primary_id = account_id[:-1]  # Remove 'b' suffix
                     if primary_id in self.account_nodes:
                         node_info = self.account_nodes[primary_id]
                         account_id = primary_id
@@ -850,17 +876,17 @@ class TransactionCoordinator:
     
     def execute_transfer(self, transaction_id, account_id, amount, is_sender):
         try:
-            # 首先确保我们只对主节点进行操作
+            # First ensure we only operate on primary nodes
             node_info = self.account_nodes.get(account_id)
             if not node_info:
                 return False
             
-            # 如果这是备份节点，需要找到对应的主节点
+            # If this is a backup node, find its corresponding primary node
             node_role = node_info.get('role', 'primary')
             if node_role == 'backup':
-                # 对于备份节点(例如a1b)，找到其对应的主节点(a1)
+                # For backup node(e.g., a1b), find its corresponding primary node(a1)
                 if account_id.endswith('b') and len(account_id) > 1:
-                    primary_id = account_id[:-1]  # 去掉'b'后缀
+                    primary_id = account_id[:-1]  # Remove 'b' suffix
                     if primary_id in self.account_nodes:
                         node_info = self.account_nodes[primary_id]
                         account_id = primary_id
@@ -945,59 +971,59 @@ class TransactionCoordinator:
                     self.save_data()
             
     def promote_backup_to_primary(self, backup_id, failed_primary_id):
-        """将备份节点提升为主节点"""
-        # 首先检查备份节点是否存在
+        """Promote backup node to primary"""
+        # First check if backup node exists
         if backup_id not in self.account_nodes:
-            print(f"无法提升节点 {backup_id}：节点不存在")
+            print(f"Cannot promote node {backup_id}: Node does not exist")
             return False
         
-        # 1. 在协调器内部更新状态（这步永远不应该失败）
+        # 1. Update coordinator internal state (this step should never fail)
         try:
             with self.lock:
-                # 将备份节点角色更改为主节点
+                # Change backup node role to primary
                 self.account_nodes[backup_id]['role'] = 'primary'
                 
-                # 移除主备关系
+                # Remove primary-backup relationship
                 self.node_pairs.pop(failed_primary_id, None)
                 
-                # 保存更新后的状态
+                # Save updated state
                 self.save_data()
                 
-            print(f"协调器已将备份节点 {backup_id} 的角色更新为主节点")
+            print(f"Coordinator has updated node {backup_id} role to primary")
         except Exception as e:
-            print(f"更新协调器内部状态时出错: {e}")
+            print(f"Error updating coordinator internal state: {e}")
             return False
         
-        # 2. 尝试通知备份节点，但即使失败也不影响状态更新
+        # 2. Try to notify backup node, but even if it fails, do not affect state update
         success = False
         try:
             backup_port = self.account_nodes[backup_id]['port']
             host = self.node_hosts.get(backup_id, 'localhost')
             
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(2)  # 短超时，防止长时间阻塞
+                s.settimeout(2)  # Short timeout, avoid long blocking
                 s.connect((host, backup_port))
                 promote_request = {
                     'command': 'become_primary'
                 }
                 s.send(json.dumps(promote_request).encode('utf-8'))
                 
-                # 尝试获取响应但不依赖它
+                # Try to get response but do not depend on it
                 try:
                     response_data = s.recv(4096)
                     promote_response = json.loads(response_data.decode('utf-8'))
                     success = promote_response.get('status') == 'success'
                     
                     if success:
-                        print(f"备份节点 {backup_id} 确认已接收提升为主节点的命令")
+                        print(f"Backup node {backup_id} confirmed receiving command to become primary")
                     else:
-                        print(f"备份节点 {backup_id} 返回错误: {promote_response.get('message')}")
+                        print(f"Backup node {backup_id} returned error: {promote_response.get('message')}")
                 except Exception as e:
-                    print(f"读取备份节点响应时出错: {e}")
+                    print(f"Error reading backup node response: {e}")
         except Exception as e:
-            print(f"向备份节点 {backup_id} 发送提升通知时出错: {e}")
+            print(f"Error sending promote notification to backup node {backup_id}: {e}")
         
-        # 不管通知是否成功，状态已更新，所以返回成功
+        # Regardless of notification success, state is updated, so return success
         return True
 
 if __name__ == "__main__":

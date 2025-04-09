@@ -7,6 +7,16 @@ import uuid
 
 class AccountNode:
     def __init__(self, node_id, port, coordinator_port=5010, role='primary', coordinator_host='localhost'):
+        """
+        Initialize an account node that manages account balance and transactions.
+        
+        Args:
+            node_id: Unique identifier for this account node
+            port: Port number for this node to listen on
+            coordinator_port: Port number of the transaction coordinator
+            role: Role of this node ('primary' or 'backup')
+            coordinator_host: Hostname of the transaction coordinator
+        """
         self.node_id = node_id
         self.port = port
         self.coordinator_port = coordinator_port
@@ -44,6 +54,10 @@ class AccountNode:
         print(f"Account Node {self.node_id} started on port {self.port} with balance {self.balance} as {self.role}")
     
     def load_data(self):
+        """
+        Load account data from persistent storage if it exists.
+        Restores balance and transaction history from the saved JSON file.
+        """
         if os.path.exists(self.data_file):
             try:
                 with open(self.data_file, 'r') as f:
@@ -54,6 +68,10 @@ class AccountNode:
                 print(f"Error loading data: {e}")
     
     def save_data(self):
+        """
+        Save account data to persistent storage.
+        Writes balance and transaction history to a JSON file.
+        """
         data = {
             'balance': self.balance,
             'transaction_history': self.transaction_history
@@ -62,6 +80,10 @@ class AccountNode:
             json.dump(data, f, indent=2)
     
     def start_server(self):
+        """
+        Start the TCP server to listen for incoming requests.
+        Creates a new thread for each client connection.
+        """
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind(('0.0.0.0', self.port))
@@ -74,6 +96,13 @@ class AccountNode:
             client_thread.start()
     
     def handle_request(self, client):
+        """
+        Handle incoming client requests.
+        Parses the JSON request and executes the appropriate command.
+        
+        Args:
+            client: Socket connection to the client
+        """
         try:
             data = client.recv(4096)
             if not data:
@@ -93,7 +122,7 @@ class AccountNode:
                     }
             
             elif command == 'prepare_transfer':
-                # Phase 1 of 2PC
+                # Phase 1 of 2PC (Two-Phase Commit)
                 amount = request.get('amount', 0)
                 is_sender = request.get('is_sender', False)
                 
@@ -110,13 +139,13 @@ class AccountNode:
                         }
             
             elif command == 'execute_transfer':
-                # Phase 2 of 2PC
+                # Phase 2 of 2PC (Two-Phase Commit)
                 transaction_id = request.get('transaction_id')
                 amount = request.get('amount', 0)
                 is_sender = request.get('is_sender', False)
                 
                 with self.lock:
-                    # 只有当节点角色为primary时才执行实际的转账操作
+                    # Only execute the actual transfer when the node is primary
                     if self.role == 'primary':
                         if is_sender:
                             self.balance -= amount
@@ -136,9 +165,9 @@ class AccountNode:
                         # Sync with backup
                         if self.backup_node:
                             self.sync_to_backup()
-                    # 如果是backup节点，记录交易但不修改余额（由primary同步过来）
+                    # If this is a backup node, record the transaction but don't modify the balance (will be synced from primary)
                     elif self.role == 'backup':
-                        # 仅记录交易历史
+                        # Only record transaction history
                         self.transaction_history.append({
                             'transaction_id': transaction_id,
                             'amount': amount if not is_sender else -amount,
@@ -271,6 +300,10 @@ class AccountNode:
             client.close()
     
     def send_heartbeat(self):
+        """
+        Periodically send heartbeat signals to the coordinator.
+        Updates node status and receives configuration updates from coordinator.
+        """
         while True:
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -283,7 +316,7 @@ class AccountNode:
                         'role': self.role,
                         'backup_node': self.backup_node,
                         'primary_node': self.primary_node,
-                        'client_addr': socket.gethostbyname(socket.gethostname())  # 发送本机IP地址
+                        'client_addr': socket.gethostbyname(socket.gethostname())  # Send local IP address
                     }
                     s.send(json.dumps(heartbeat).encode('utf-8'))
                     response = json.loads(s.recv(4096).decode('utf-8'))
@@ -306,7 +339,11 @@ class AccountNode:
             time.sleep(5)  # Send heartbeat every 5 seconds
 
     def sync_with_partner(self):
-        """Periodically synchronize data with partner node"""
+        """
+        Periodically synchronize data with partner node.
+        If primary, syncs data to backup node.
+        If backup, checks primary node health.
+        """
         while True:
             try:
                 # If primary, sync data to backup
@@ -323,7 +360,10 @@ class AccountNode:
             time.sleep(self.sync_interval)
     
     def sync_to_backup(self):
-        """Send current state to backup node"""
+        """
+        Send current state to backup node.
+        Transfers balance and transaction history to keep backup in sync.
+        """
         if not self.backup_node:
             return
         
@@ -348,7 +388,10 @@ class AccountNode:
             print(f"Error syncing to backup: {e}")
     
     def check_primary_health(self):
-        """Check if primary node is still alive with retries"""
+        """
+        Check if primary node is still alive with multiple retry attempts.
+        If primary fails, notifies coordinator for failover.
+        """
         if not self.primary_node:
             return
         
@@ -397,7 +440,10 @@ class AccountNode:
         self.notify_coordinator_of_primary_failure()
 
     def notify_coordinator_of_primary_failure(self):
-        """Notify coordinator that primary appears to be down"""
+        """
+        Notify coordinator that primary node appears to be down.
+        This triggers the failover process to promote this backup node to primary.
+        """
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((self.coordinator_host, self.coordinator_port))
@@ -415,6 +461,10 @@ class AccountNode:
             print(f"Failed to notify coordinator about primary failure: {e}")
 
 if __name__ == "__main__":
+    """
+    Main entry point for running an account node.
+    Parses command line arguments and starts the node.
+    """
     import sys
     
     if len(sys.argv) < 3:

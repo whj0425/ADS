@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Distributed Banking System Project Presentation</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; 
+            line-height: 1.6; 
+            padding: 30px; 
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        section { 
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px; 
+            margin-bottom: 30px; 
+            page-break-before: always; /* Basic pagination for printing/PDF */
+        }
+        h1, h2, h3 { 
+            color: #1a237e; /* Dark blue heading */
+        }
+        h1 { 
+            text-align: center; 
+            margin-bottom: 40px; 
+            font-size: 2.5em;
+            color: #0d47a1; /* Slightly lighter blue for main title */
+        }
+        h2 { 
+            border-bottom: 2px solid #90caf9; /* Light blue underline */
+            padding-bottom: 10px; 
+            margin-top: 0; /* No top margin for section titles */
+            font-size: 1.8em;
+        }
+         h3 { 
+            color: #1e88e5; /* Medium blue for sub-headings */
+            margin-top: 25px;
+            font-size: 1.4em;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        code { 
+            background-color: #e3f2fd; /* Light blue background for code */
+            padding: 3px 6px; 
+            border-radius: 4px; 
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            color: #0d47a1; 
+        }
+        .diagram-placeholder { 
+            text-align: center; 
+            padding: 50px; 
+            border: 2px dashed #90caf9; 
+            background-color: #e3f2fd; 
+            margin: 30px auto; 
+            font-style: italic; 
+            color: #555; 
+            border-radius: 8px;
+            width: 80%;
+        }
+        /* Simple layout for "slides" */
+        @media print {
+          section {
+             page-break-before: always;
+             box-shadow: none;
+             border: none;
+          }
+          h1 { page-break-after: always; }
+        }
+
+    </style>
+    <!-- Import mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+</head>
+<body>
+
+    <h1>Distributed Banking System Project Presentation</h1>
+
+    <!-- Slide 1: Project Background and Goals -->
+    <section id="background-goal">
+        <h2>1. Project Goals</h2>
+
+        <ul>
+            <li>Build a prototype of a simulated distributed banking system.</li>
+            <li>Implement core transfer functionality, ensuring **atomicity** of distributed transactions.</li>
+            <li>Enhance system **high availability** and **fault tolerance** through primary-backup replication and failover mechanisms.</li>
+            <li>Explore and apply classic protocols in distributed systems (e.g., Two-Phase Commit).</li>
+        </ul>
+    </section>
+
+    <!-- Slide 2: System Architecture Overview -->
+    <section id="architecture">
+        <h2>2. System Architecture Overview</h2>
+        <p>This system adopts a distributed architecture combining **Primary-Backup Replication** with a **Central Coordinator**.</p>
+        <ul>
+            <li><strong>Transaction Coordinator:</strong> The system's "brain," responsible for managing transactions, monitoring nodes, and handling failures.</li>
+            <li><strong>Account Node:</strong> Represents bank accounts, divided into two roles: <code>Primary</code> and <code>Backup</code>.</li>
+            <li><strong>Client:</strong> User interface for system interaction, sends requests to the coordinator.</li>
+        </ul>
+        <div class="diagram-placeholder">
+            <div class="mermaid">
+graph TB
+    C[Client]
+    TC[Transaction<br>Coordinator]
+    A1P[Account A1<br>Primary]
+    A1B[Account A1<br>Backup]
+    A2P[Account A2<br>Primary]
+    A2B[Account A2<br>Backup]
+    
+    %% Connection relationships
+    C -->|Send Request| TC
+    TC -->|Coordinate Transaction| A1P & A2P
+    TC -->|Monitor Heartbeat| A1P & A1B & A2P & A2B
+    A1P -->|Sync State| A1B
+    A2P -->|Sync State| A2B
+    A1P & A2P -->|Return Results| TC
+    TC -->|Send Response| C
+    
+    %% Styles
+    classDef coordinator fill:#f96,stroke:#333,stroke-width:2px;
+    classDef primary fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef backup fill:#ddf,stroke:#333,stroke-width:1px;
+    classDef client fill:#bfb,stroke:#333,stroke-width:2px;
+    
+    class TC coordinator;
+    class A1P,A2P primary;
+    class A1B,A2B backup;
+    class C client;
+            </div>
+        </div>
+
+    </section>
+
+    <!-- Slide 3: Simple Interaction Flow (Replacing original Slides 3 & 4) -->
+    <section id="simple-interaction">
+        <h2>3. Simple Interaction Flow</h2>
+        <p>Let's first look at a basic interaction, such as a client querying an account balance:</p>
+        <div class="diagram-placeholder">
+            <div class="mermaid">
+sequenceDiagram
+    participant Client
+    participant Coordinator
+    participant AccountNode as Account Node A1 (Primary)
+    
+    Client->>Coordinator: Query Request (get_balance a1)
+    Note over Client,Coordinator: {command: "get_balance", account_id: "a1"}
+    
+    Coordinator->>AccountNode: Forward Query Request
+    Note over Coordinator,AccountNode: Coordinator looks up Primary node for a1
+    
+    AccountNode->>AccountNode: Process Query
+    Note over AccountNode: Read local balance
+    
+    AccountNode->>Coordinator: Return Balance Result
+    Note over AccountNode,Coordinator: {status: "success", balance: 1000}
+    
+    Coordinator->>Client: Forward Response to Client
+    
+    Note over Client: Display balance to user
+            </div>
+        </div>
+        <ol>
+            <li><strong>Client -> Transaction Coordinator:</strong>
+                <ul>
+                    <li>User enters a command in the client, such as `balance a1`.</li>
+                    <li>The client packages the request (containing command `get_balance` and account ID `a1`) in JSON format.</li>
+                    <li>The client sends the request to the coordinator through a network connection.</li>
+                </ul>
+            </li>
+            <li><strong>Transaction Coordinator -> Account Node:</strong>
+                <ul>
+                    <li>The coordinator receives the request and parses the account ID `a1` to be queried.</li>
+                    <li>The coordinator looks up the network address (IP and port) of the Primary node for `a1` in its maintained node list.</li>
+                    <li>The coordinator forwards the balance query request to the Primary node of `a1`.</li>
+                </ul>
+            </li>
+             <li><strong>Account Node -> Transaction Coordinator:</strong>
+                <ul>
+                    <li>The Primary node of `a1` receives the request.</li>
+                    <li>The node queries the locally stored balance information.</li>
+                    <li>The node packages the response containing the balance and sends it back to the coordinator.</li>
+                </ul>
+            </li>
+             <li><strong>Transaction Coordinator -> Client:</strong>
+                <ul>
+                    <li>The coordinator receives the response from the account node.</li>
+                    <li>The coordinator forwards the response to the original client.</li>
+                </ul>
+            </li>
+             <li><strong>Client:</strong>
+                <ul>
+                    <li>The client receives the response, parses it, and displays the balance to the user.</li>
+                </ul>
+            </li>
+        </ol>
+    </section>
+
+    <!-- Slide 4: Detailed Interaction: Two-Phase Commit and Locks -->
+    <section id="detailed-interaction">
+        <h2>4. Detailed Interaction: Two-Phase Commit (2PC) and Locks</h2>
+        <p>Now, using the core **transfer** operation as an example, let's delve into how the system ensures **atomicity** and **consistency** through **Two-Phase Commit (2PC)** and **locking mechanisms**.</p>
+        
+        <h3>Background: Why is 2PC Needed?</h3>
+        <ul>
+            <li>A transfer operation involves at least two account nodes (sender and receiver).</li>
+            <li>We must ensure: either both nodes successfully complete the operation (sender deducts, receiver adds), or neither executes.</li>
+            <li>If only half is completed (e.g., the sender successfully deducts but the receiver node fails to add), data inconsistency will occur.</li>
+            <li>2PC is a protocol designed to solve this distributed transaction atomicity problem, with the coordinator providing unified command.</li>
+        </ul>
+
+        <div class="diagram-placeholder">
+            <div class="mermaid">
+sequenceDiagram
+    participant Client
+    participant TC as Transaction Coordinator
+    participant A1 as Account A1 (Sender)
+    participant A2 as Account A2 (Receiver)
+    
+    Client->>TC: Transfer Request (a1 to a2, 100)
+    Note over Client,TC: {command: "transfer", from: "a1", to: "a2", amount: 100}
+    
+    %% Phase 1: Prepare
+    TC->>A1: Prepare Request
+    Note over TC,A1: {transaction_id: "tx123", is_sender: true, amount: 100}
+    
+    TC->>A2: Prepare Request
+    Note over TC,A2: {transaction_id: "tx123", is_sender: false, amount: 100}
+    
+    A1->>A1: Check Balance ≥ 100
+    A1->>TC: Ready/Yes Response
+    
+    A2->>A2: Confirm Can Receive
+    A2->>TC: Ready/Yes Response
+    
+    %% Phase 2: Commit/Abort Decision
+    TC->>TC: All Nodes Ready? Yes → Commit
+    
+    %% Phase 2: Execute
+    TC->>A1: Commit Command
+    Note over TC,A1: {transaction_id: "tx123", is_sender: true, amount: 100}
+    
+    TC->>A2: Commit Command
+    Note over TC,A2: {transaction_id: "tx123", is_sender: false, amount: 100}
+    
+    A1->>A1: Deduct 100
+    A1->>TC: Acknowledgment
+    
+    A2->>A2: Add 100
+    A2->>TC: Acknowledgment
+    
+    A1->>A1B: Sync State to Backup
+    A2->>A2B: Sync State to Backup
+    
+    TC->>Client: Transfer Result
+    Note over TC,Client: {status: "success", message: "Transfer completed"}
+            </div>
+        </div>
+        
+
+
+        <h3>Role of Locking Mechanism:</h3>
+        
+        <div class="diagram-placeholder">
+            <div class="mermaid">
+sequenceDiagram
+    participant TC as Transaction Coordinator
+    participant T1 as Transaction 1<br>(Transfer a1→a3: 50)
+    participant T2 as Transaction 2<br>(Transfer a1→a4: 30)
+    participant A1 as Account A1<br>(Balance: 100)
+    
+    Note over TC,A1: Concurrent transactions competing for the same account
+    
+    TC->>T1: Start Transaction 1
+    TC->>T2: Start Transaction 2
+    
+    T1->>A1: Prepare Request (Attempt to Lock)
+    Note right of A1: Lock Acquired by T1
+    
+    T2->>A1: Prepare Request (Attempt to Lock)
+    Note right of A1: ❌ Lock Blocked (must wait)
+    
+    A1->>T1: Ready Response
+    
+    T1->>A1: Commit (Deduct 50)
+    Note right of A1: Balance: 100 → 50
+    
+    A1->>T1: Acknowledgment
+    Note right of A1: Lock Released
+    
+    Note right of A1: Lock Available Again
+    
+    A1->>T2: Now Process T2 (Lock Acquired)
+    Note right of A1: Check Balance: 50 ≥ 30 ✓
+    
+    A1->>T2: Ready Response
+    
+    T2->>A1: Commit (Deduct 30)
+    Note right of A1: Balance: 50 → 20
+    
+    A1->>T2: Acknowledgment
+    Note right of A1: Lock Released
+    
+    Note over TC,A1: Without locks:<br>Both T1 and T2 might read balance=100 concurrently<br>Final balance would be 50 or 70 instead of 20
+            </div>
+        </div>
+        
+        <ul>
+            <li>Locks are acquired during the Prepare phase and released after the Commit/Abort phase ends.</li>
+            <li>Ensures that during transaction processing, account data cannot be modified by other concurrent transactions, guaranteeing **isolation**.</li>
+            <li>Prevents issues such as two transactions simultaneously deducting funds leading to incorrect balance calculations.</li>
+
+        </ul>
+    </section>
+
+
+
+    <!-- Slide 5: High Availability: Primary-Backup Nodes and Fault Tolerance Mechanisms -->
+    <section id="high-availability">
+        <h2>5. High Availability: Primary-Backup Nodes and Fault Tolerance Mechanisms</h2>
+        <h3>Background: Single Point of Failure Problem</h3>
+        <ul>
+            <li>If an account node (especially a Primary node) goes down due to hardware failure, network issues, or program crashes, services related to that account (queries, transfers) will be interrupted.</li>
+            <li>We need a mechanism that allows the system to continue providing services even when some nodes fail. This is **High Availability**.</li>
+        </ul>
+        <h3>Solution: Primary-Backup Replication</h3>
+        <ul>
+            <li>Equip each important account node (Primary) with one or more **Backup nodes**.</li>
+            <li><strong>Role Responsibilities:</strong>
+                <ul>
+                    <li><strong>Primary:</strong> Responsible for handling all read and write requests (balance queries, executing transfers).</li>
+                    <li><strong>Backup:</strong> Does not directly process client requests but passively receives state updates from the Primary.</li>
+                </ul>
+            </li>
+            <li><strong>Data Synchronization:</strong>
+                <ul>
+                    <li>After the Primary node performs a write operation (such as updating balance and transaction history after a successful transfer), it sends these **state changes** to its Backup nodes.</li>
+                    <li>The Backup node receives the updates and applies them to its own data copy.</li>
+                    <li>The goal is to make the Backup node's data as close as possible to the Primary node (typically asynchronous or semi-synchronous replication). In this implementation, synchronization occurs after the Primary successfully executes the Commit operation.</li>
+                </ul>
+            </li>
+        </ul>
+        <h3>Fault Tolerance Mechanism: Failure Detection and Automatic Failover</h3>
+        <ul>
+             <li><strong>Heartbeat Detection:</strong>
+                 <ul>
+                    <li>All account nodes (Primary and Backup) periodically send heartbeat signals to the **Transaction Coordinator**, indicating they are online and healthy.</li>
+                 </ul>
+             </li>
+             <li><strong>Failure Detection:</strong>
+                 <ul>
+                    <li>The coordinator continuously monitors heartbeats from all nodes.</li>
+                    <li>If no heartbeat is received from a Primary node within a preset time window, the coordinator determines that the Primary node has **failed**.</li>
+                 </ul>
+             </li>
+             <li><strong>Automatic Failover Process:</strong>
+                 <ul>
+                    <li>The coordinator marks the failed Primary node as "failed" status.</li>
+                    <li>The coordinator looks up the Backup node corresponding to the failed Primary.</li>
+                    <li>The coordinator sends a **"Promote"** command to the Backup node.</li>
+                    <li>Upon receiving the command, the Backup node changes its role from `Backup` to `Primary`.</li>
+                    <li>The new Primary node takes over service and begins processing requests sent to that account.</li>
+                    <li>The coordinator updates its node list and routes subsequent requests to the new Primary node.</li>
+                 </ul>
+             </li>
+        </ul>
+
+    </section>
+
+    <!-- Slide 6: System Testing -->
+    <section id="testing">
+        <h2>6. System Testing</h2>
+        <p>Comprehensive testing was conducted to ensure the correctness and robustness of the system. The testing strategy included unit tests for individual components and integration tests for end-to-end workflows.</p>
+        <ul>
+            <li><strong>Account Node Unit Tests:</strong>
+                <ul>
+                    <li>Verified basic account operations: `deposit`, `withdraw`, `get_balance`.</li>
+                    <li>Tested state transitions between `Primary` and `Backup` roles.</li>
+                    <li>Checked state synchronization logic between Primary and Backup nodes.</li>
+                    <li>Validated handling of prepare/commit/abort commands related to 2PC.</li>
+                </ul>
+            </li>
+            <li><strong>Transaction Coordinator Unit Tests:</strong>
+                <ul>
+                    <li>Tested the core Two-Phase Commit (2PC) protocol logic, including scenarios with successful commits and aborts.</li>
+                    <li>Verified node registration and heartbeat monitoring mechanisms.</li>
+                    <li>Validated the failure detection logic for Primary nodes.</li>
+                    <li>Tested the automatic failover process: promoting a Backup to Primary upon detected failure.</li>
+                    <li>Checked the coordinator's ability to route requests to the correct Primary node.</li>
+                </ul>
+            </li>
+            <li><strong>Integration Tests:</strong>
+                <ul>
+                    <li>Simulated end-to-end transfer scenarios involving the Client, Coordinator, and multiple Account Nodes (Primary and Backup).</li>
+                    <li>Tested the complete failover workflow: initiating a transfer, simulating Primary node failure, verifying failover to Backup, and ensuring subsequent operations succeed with the new Primary.</li>
+                    <li>Validated system behavior under various network conditions (simulated delays, temporary disconnections - although full network partition tests might be more complex).</li>
+                    <li>Ensured consistency of account balances across Primary and Backup after successful operations and state synchronization.</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+
+    <!-- Slide 7: Conclusion and Future Work -->
+    <section id="conclusion-future">
+        <h2>7. Conclusion and Future Work</h2>
+        <h3>Conclusion</h3>
+        <ul>
+            <li>Successfully developed a prototype distributed banking system demonstrating core transfer functionality.</li>
+            <li>Implemented the Two-Phase Commit (2PC) protocol coordinated by a central Transaction Coordinator to ensure atomicity of distributed transactions.</li>
+            <li>Achieved High Availability and Fault Tolerance through Primary-Backup replication and automatic failover mechanisms managed by the coordinator.</li>
+            <li>Validated system correctness and robustness through comprehensive unit and integration testing.</li>
+        </ul>
+        <h3>Future Work: Scaling and Enhancements</h3>
+        <p>While the current system provides a solid foundation, several areas can be explored for future enhancement, particularly regarding scalability:</p>
+        <ul>
+            <li><strong>Dynamic Node Discovery and Management:</strong>
+                <ul>
+                    <li>Currently, node addresses are often pre-configured. Implement a mechanism for nodes to dynamically register with the coordinator upon startup.</li>
+                    <li>Allow the coordinator to automatically discover and incorporate new Account Nodes into the system without manual reconfiguration or restarting the entire system. This could involve broadcast/multicast discovery or a dedicated registration service.</li>
+                </ul>
+            </li>
+            <li><strong>Account Sharding/Partitioning:</strong>
+                <ul>
+                    <li>As the number of accounts grows, distributing them across a larger number of Account Nodes becomes necessary.</li>
+                    <li>Implement a sharding strategy (e.g., using consistent hashing based on `account_id`) to map accounts to specific Primary nodes. The coordinator would use this mapping to route requests.</li>
+                    <li>This allows horizontal scaling by adding more Account Node pairs to handle increased load.</li>
+                </ul>
+            </li>
+             <li><strong>Coordinator Scalability and Redundancy:</strong>
+                <ul>
+                    <li>The single Transaction Coordinator can become a bottleneck and a single point of failure.</li>
+                    <li>Explore strategies for coordinator redundancy, such as using a consensus protocol (like Raft or Paxos) to elect a leader among multiple coordinator instances or partitioning coordinator responsibilities.</li>
+                </ul>
+            </li>
+            <li><strong>More Sophisticated Replication:</strong>
+                <ul>
+                    <li>Explore synchronous or semi-synchronous replication options for tighter consistency guarantees between Primary and Backup, potentially at the cost of performance.</li>
+                </ul>
+            </li>
+             <li><strong>Enhanced Monitoring and Administration:</strong>
+                 <ul>
+                    <li>Develop a dedicated monitoring dashboard to visualize system health, node status, transaction throughput, and potential bottlenecks.</li>
+                 </ul>
+             </li>
+        </ul>
+    </section>
+
+</body>
+</html> 
